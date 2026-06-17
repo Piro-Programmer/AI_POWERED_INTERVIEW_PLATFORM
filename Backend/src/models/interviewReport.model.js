@@ -1,8 +1,8 @@
-const mongoose = require ('mongoose')
+import mongoose from 'mongoose'
 
 
 const technicalQuestions = new mongoose.Schema({
-  questions: {
+  question: {
     type: String,
     required: [true, "Technical question is required"]
   },
@@ -19,7 +19,7 @@ const technicalQuestions = new mongoose.Schema({
 })
 
 const behavioralQuestions = new mongoose.Schema({
-  questions: {
+  question: {
     type: String,
     required: [true, "Behavioral question is required"]
   },
@@ -84,7 +84,7 @@ const interviewReportSchema = new mongoose.Schema({
   },
   technicalQuestions:[technicalQuestions],
   behavioralQuestions: [behavioralQuestions],
-  skillsGaps: [skillGapSchema],
+  skillGaps: [skillGapSchema],
   preparationPlan: [preparationPlanSchema],
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -97,4 +97,4 @@ const interviewReportSchema = new mongoose.Schema({
 
 const interviewReportModel = mongoose.model("InterviewReport", interviewReportSchema)
 
-module.exports = interviewReportModel
+export default interviewReportModel;
