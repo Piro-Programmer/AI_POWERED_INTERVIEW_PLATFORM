@@ -6,7 +6,6 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GOOGLE_GENAI_API_KEY
 });
 
-// ✅ STRICT schema (no empty arrays)
 const interviewReportSchema = z.object({
   matchScore: z.number().min(0).max(100),
 
@@ -39,17 +38,14 @@ const interviewReportSchema = z.object({
       focus: z.string(),
       tasks: z.array(z.string()).min(2)
     })
-  ).min(5),
-
-  title: z.string()
+  ).min(5)
 });
 
-// 🔁 Retry wrapper
 async function generateWithRetry(prompt, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-pro", // 🔥 important change
+        model: "gemini-2.5-pro",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -57,18 +53,14 @@ async function generateWithRetry(prompt, retries = 3) {
         }
       });
 
-      // 🧪 Debug (optional)
       console.log("RAW AI RESPONSE:", response.text);
 
       const parsed = JSON.parse(response.text);
-
-      // ✅ Strict validation
       const validated = interviewReportSchema.parse(parsed);
 
       return validated;
-
     } catch (error) {
-      console.log(`❌ Attempt ${attempt} failed`);
+      console.log(`Attempt ${attempt} failed`);
 
       if (attempt === retries) {
         throw new Error("AI failed to generate valid structured response");
@@ -77,9 +69,7 @@ async function generateWithRetry(prompt, retries = 3) {
   }
 }
 
-// 🎯 MAIN SERVICE FUNCTION
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
-
   const prompt = `
 You are an expert technical interviewer.
 

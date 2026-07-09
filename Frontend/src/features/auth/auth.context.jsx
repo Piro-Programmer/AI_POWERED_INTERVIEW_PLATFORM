@@ -1,5 +1,5 @@
-import { createContext, useState } from "react";
-// import { getMe } from "./services/auth.api";
+import { createContext, useEffect, useState } from "react";
+import { getMe } from "./services/auth.api";
 
 
 export const AuthContext = createContext()
@@ -11,18 +11,17 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
 
-  // useEffect(() => {
+  useEffect(() => {
+    const getAndSetUser = async () => {
+      const data = await getMe()
+      if (data && data.user) {
+        setUser(data.user)
+      }
+      setLoading(false)
+    }
 
-  //   const getAndSetUser = async () => {
-  //     const data = await getMe()
-  //     if (data && data.user) {
-  //       setUser(data.user)
-  //     }
-  //     setLoading(false)
-  //   }
-
-  //   getAndSetUser()
-  // }, [])
+    getAndSetUser()
+  }, [])
 
 
   return (
@@ -31,4 +30,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   )
 }
-// 2:49:42
