@@ -4,6 +4,28 @@ import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import generateInterviewReport from "../services/ai.service.js";
 import interviewReportModel from "../models/interviewReport.model.js";
 
+function createReportTitle(jobDescription) {
+  const normalizedDescription = jobDescription
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const roleMatch = normalizedDescription.match(
+    /(?:role|position|job title|title)\s*[:\-]\s*([a-z0-9 .,+#/()-]{2,60})/i
+  );
+
+  const titleSource = roleMatch?.[1] || normalizedDescription;
+  const cleanTitle = titleSource
+    .replace(/[^a-z0-9 .,+#/()-]/gi, "")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 6)
+    .join(" ");
+
+  return cleanTitle
+    ? `Interview Report - ${cleanTitle}`
+    : "Interview Report";
+}
+
 /**
  * @name generateInterviewReportController
  * @description Parse the uploaded resume PDF, generate a structured interview
@@ -34,6 +56,7 @@ async function generateInterviewReportController(req, res) {
 
     const interviewReport = await interviewReportModel.create({
       user: req.user.id,
+      title: createReportTitle(jobDescription),
       resume: resumeText,
       selfDescription,
       jobDescription,
