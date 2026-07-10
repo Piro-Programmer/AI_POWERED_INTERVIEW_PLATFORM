@@ -1,62 +1,89 @@
-import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
-import "../auth.form.scss"
-import { useAuth } from '../hooks/useAuth'
-import { useNavigate } from 'react-router-dom'
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import "../auth.form.scss";
+import { useAuth } from "../hooks/useAuth";
 
 const Login = () => {
+  const { loading, handleLogin } = useAuth();
+  const navigate = useNavigate();
 
-  const { loading, handleLogin } = useAuth()
-  const navigate = useNavigate()
-
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    const success = await handleLogin({ email, password })
+    e.preventDefault();
+    const success = await handleLogin({ email, password });
     if (success) {
-      navigate('/')
+      navigate("/");
     }
-  }
+  };
 
   if (loading) {
     return (
-      <main>
-        <h1>Loading..........</h1>
+      <main className="auth-page">
+        <div className="auth-loading">Preparing your workspace...</div>
       </main>
-    )
+    );
   }
 
   return (
-    <main>
-      <div className="form-container">
-        <h1>Login</h1>
+    <main className="auth-page">
+      <section className="auth-showcase">
+        <p className="eyebrow">AI Interview Lab</p>
+        <h1>Practice with the same precision recruiters expect from strong candidates.</h1>
+        <p>
+          Convert resumes and job descriptions into structured interview reports with match signals,
+          questions, answers, and a five-day preparation plan.
+        </p>
+        <div className="auth-stats">
+          <span>JWT Auth</span>
+          <span>Gemini AI</span>
+          <span>Mongo Reports</span>
+        </div>
+      </section>
+
+      <section className="auth-card">
+        <div className="auth-card__header">
+          <span className="brand-mark brand-mark--small">IP</span>
+          <div>
+            <p className="eyebrow">Welcome back</p>
+            <h2>Login</h2>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit}>
-
-          <div className='input-group'>
+          <div className="input-group">
             <label htmlFor="email">Email</label>
             <input
-              onChange={(e) => { setEmail(e.target.value) }}
-              type="email" id='email' name='email' placeholder='Enter email address' />
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              id="email"
+              name="email"
+              placeholder="you@example.com"
+              required
+            />
           </div>
-          <div className='input-group'>
+          <div className="input-group">
             <label htmlFor="password">Password</label>
             <input
-              onChange={(e) => { setPassword(e.target.value) }}
-              type="password" id='password' name='password' placeholder='Enter password' />
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              id="password"
+              name="password"
+              placeholder="Enter your password"
+              required
+            />
           </div>
 
-          <button className='button primary-button'>Login</button>
-
+          <button className="button primary-button">Open Workspace</button>
         </form>
 
-        <p>Don't have an account? <Link to={"/register"}>Register</Link> </p>
-
-      </div>
+        <p className="auth-switch">
+          New to the platform? <Link to="/register">Create an account</Link>
+        </p>
+      </section>
     </main>
-  )
-}
+  );
+};
 
-export default Login
+export default Login;
