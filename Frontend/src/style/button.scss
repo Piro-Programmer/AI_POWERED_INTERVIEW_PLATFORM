@@ -1,19 +1,58 @@
-.button {
-  border: none;
-  outline: none;
-  border-radius: 1rem;
-  padding-inline: 1.5rem;
-  padding-block: 0.75rem;
+.button,
+.ghost-button {
+  min-height: 2.8rem;
+  border: 0;
+  outline: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  padding: 0.78rem 1.05rem;
   cursor: pointer;
+  text-decoration: none;
+  font-weight: 800;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
 
-  transition: all 0.3s ease-in-out;
-
-  &.primary-button {
-    background-color: #e1034d;
-    color: aliceblue;
+  &:hover {
+    transform: translateY(-1px);
   }
 
   &:active {
-    transform: scale(0.9);
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+    transform: none;
+  }
+}
+
+.primary-button {
+  color: #03130e;
+  background: linear-gradient(135deg, var(--accent), #94f8d8);
+  box-shadow: 0 16px 36px rgba(56, 232, 176, 0.22);
+}
+
+.secondary-button {
+  color: var(--text);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ghost-button {
+  color: var(--muted);
+  border: 1px solid var(--line);
+  background: transparent;
+
+  &:hover {
+    color: var(--text);
+    border-color: rgba(56, 232, 176, 0.28);
+    background: rgba(56, 232, 176, 0.07);
   }
 }
