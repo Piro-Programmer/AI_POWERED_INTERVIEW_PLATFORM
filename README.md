@@ -1,6 +1,6 @@
 # Interview Lab: AI-Powered Interview Preparation (MERN + Groq)
 
-**Live demo:** https://ai-powered-interview-platform-gamma.vercel.app
+**Live demo:** https://ai-powered-interview-platform-hywork.vercel.app/
 
 ## Overview
 
