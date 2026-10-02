@@ -1,4 +1,5 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import "./markup-sheet.scss";
 
 const KIND_LABEL = { skill: "Likely question", people: "Behavioral", signal: "Read between the lines", mine: "Your mark" };
 const WIDE = "(min-width: 900px)";
@@ -7,9 +8,15 @@ const LINE = 14; // marks whose tops are within this many px count as one line
 
 const delayFor = (order) => `${Math.min(350 + order * 110, 3200)}ms`;
 
-const NoteBody = ({ kind, children }) => (
+const DEFAULT_LEGEND = [
+  { kind: "skill", label: "skill" },
+  { kind: "people", label: "people" },
+  { kind: "signal", label: "subtext" },
+];
+
+const NoteBody = ({ kind, label, children }) => (
   <div>
-    <span className="note__kind">{KIND_LABEL[kind]}</span>
+    <span className="note__kind">{label ?? KIND_LABEL[kind]}</span>
     <p>{children}</p>
   </div>
 );
@@ -17,7 +24,13 @@ const NoteBody = ({ kind, children }) => (
 // One job description, marked up: highlights in the text, numbered notes in the
 // margin, and a hover note for marks that didn't make the margin. Remount it
 // (key={text}) to replay the drawing animation.
-const MarkupSheet = ({ result, label }) => {
+const MarkupSheet = ({
+  result,
+  label,
+  legend = DEFAULT_LEGEND,
+  className = "",
+  emptyText = "Nothing here matched our list. The full report doesn't rely on keywords — it reads the role in context.",
+}) => {
   const { segments, notes } = result;
   const bodyRef = useRef(null);
   const notesRef = useRef(null);
@@ -113,13 +126,13 @@ const MarkupSheet = ({ result, label }) => {
   const extra = notes.length - marginNotes.length;
 
   return (
-    <div className="sheet">
+    <div className={`sheet ${className}`}>
       <div className="sheet__head">
         <span className="eyebrow">{label}</span>
         <span className="sheet__legend" aria-hidden="true">
-          <span><i className="swatch swatch--skill" /> skill</span>
-          <span><i className="swatch swatch--people" /> people</span>
-          <span><i className="swatch swatch--signal" /> subtext</span>
+          {legend.map((item) => (
+            <span key={item.kind}><i className={`swatch swatch--${item.kind}`} /> {item.label}</span>
+          ))}
         </span>
       </div>
 
@@ -157,7 +170,7 @@ const MarkupSheet = ({ result, label }) => {
 
           {peekNote && (
             <div className="peek" style={{ top: peek.top, left: peek.left, width: PEEK_WIDTH }} role="tooltip">
-              <NoteBody kind={peekNote.kind}>{peekNote.text}</NoteBody>
+              <NoteBody kind={peekNote.kind} label={peekNote.label}>{peekNote.text}</NoteBody>
             </div>
           )}
         </div>
@@ -173,7 +186,7 @@ const MarkupSheet = ({ result, label }) => {
               onMouseLeave={() => setActive(null)}
             >
               <span className="note__n">{note.n}</span>
-              <NoteBody kind={note.kind}>{note.text}</NoteBody>
+              <NoteBody kind={note.kind} label={note.label}>{note.text}</NoteBody>
             </li>
           ))}
           {mine.map((m) => (
@@ -188,9 +201,7 @@ const MarkupSheet = ({ result, label }) => {
       </div>
 
       {notes.length === 0 ? (
-        <p className="sheet__empty">
-          Nothing here matched our list. The full report doesn’t rely on keywords — it reads the role in context.
-        </p>
+        <p className="sheet__empty">{emptyText}</p>
       ) : (
         extra > 0 && (
           <p className="sheet__more">

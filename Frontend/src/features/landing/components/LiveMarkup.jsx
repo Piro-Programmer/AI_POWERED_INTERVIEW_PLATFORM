@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import MarkupSheet from "./MarkupSheet";
+import MarkupSheet from "../../../components/MarkupSheet";
 import { markup } from "../markup";
 import { SAMPLES } from "../samples";
 
