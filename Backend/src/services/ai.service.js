@@ -1,10 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
+import Groq from "groq-sdk";
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GOOGLE_GENAI_API_KEY
-});
 
 const interviewReportSchema = z.object({
   matchScore: z.number().min(0).max(100),
@@ -41,32 +37,63 @@ const interviewReportSchema = z.object({
   ).min(5)
 });
 
+// zod v4's own converter; zod-to-json-schema returns an empty schema for v4.
+const { $schema, ...reportJsonSchema } = z.toJSONSchema(interviewReportSchema);
+
+// Groq is used when GROQ_API_KEY is set, otherwise Gemini.
+const provider = process.env.GROQ_API_KEY ? "groq" : "gemini";
+
+let groqClient;
+let geminiClient;
+
+async function generateWithGroq(prompt) {
+  groqClient ??= new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+  const response = await groqClient.chat.completions.create({
+    model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
+    messages: [
+      { role: "system", content: "You are an expert technical interviewer. Reply with a single valid JSON object only." },
+      { role: "user", content: `${prompt}\n\nThe JSON must match this JSON Schema:\n${JSON.stringify(reportJsonSchema)}` }
+    ],
+    response_format: { type: "json_object" },
+    temperature: 0.5
+  });
+
+  return response.choices[0]?.message?.content;
+}
+
+async function generateWithGemini(prompt) {
+  geminiClient ??= new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY });
+
+  const response = await geminiClient.models.generateContent({
+    model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseJsonSchema: reportJsonSchema
+    }
+  });
+
+  return response.text;
+}
+
 async function generateWithRetry(prompt, retries = 3) {
+  const generate = provider === "groq" ? generateWithGroq : generateWithGemini;
+  let lastError;
+
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-pro",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseJsonSchema: zodToJsonSchema(interviewReportSchema),
-        }
-      });
-
-      console.log("RAW AI RESPONSE:", response.text);
-
-      const parsed = JSON.parse(response.text);
-      const validated = interviewReportSchema.parse(parsed);
+      const text = await generate(prompt);
+      const validated = interviewReportSchema.parse(JSON.parse(text));
 
       return validated;
     } catch (error) {
-      console.log(`Attempt ${attempt} failed`);
-
-      if (attempt === retries) {
-        throw new Error("AI failed to generate valid structured response");
-      }
+      lastError = error;
+      console.log(`AI attempt ${attempt}/${retries} (${provider}) failed: ${error.message}`);
     }
   }
+
+  throw new Error(`AI failed to generate valid structured response (${provider}): ${lastError?.message}`);
 }
 
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
@@ -82,6 +109,8 @@ IMPORTANT RULES:
   - 3 behavioral questions
   - 3 skill gaps
   - 5-day preparation plan
+- skill gap severity must be exactly "low", "medium" or "high"
+- Analyze the resume against the job description to calculate a realistic matchScore (0-100)
 - Keep answers practical and interview-focused
 
 Return ONLY valid JSON.
