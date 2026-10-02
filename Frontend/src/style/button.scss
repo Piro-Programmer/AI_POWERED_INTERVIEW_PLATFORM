@@ -1,58 +1,77 @@
 .button,
 .ghost-button {
-  min-height: 2.8rem;
-  border: 0;
+  min-height: 2.75rem;
+  border: 1px solid var(--ink);
   outline: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border-radius: 0.75rem;
-  padding: 0.78rem 1.05rem;
+  border-radius: var(--radius);
+  padding: 0.7rem 1.1rem;
   cursor: pointer;
   text-decoration: none;
-  font-weight: 800;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.97rem;
   transition:
-    transform 180ms ease,
-    border-color 180ms ease,
-    background 180ms ease,
-    box-shadow 180ms ease;
-
-  &:hover {
-    transform: translateY(-1px);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease,
+    color 140ms ease;
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.62;
+    opacity: 0.55;
     transform: none;
+    box-shadow: none;
   }
 }
 
+// Primary: ink slab that lifts off a highlighter-yellow shadow on hover.
 .primary-button {
-  color: #03130e;
-  background: linear-gradient(135deg, var(--accent), #94f8d8);
-  box-shadow: 0 16px 36px rgba(56, 232, 176, 0.22);
+  color: var(--paper-raised);
+  background: var(--ink);
+
+  &:hover:not(:disabled) {
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0 var(--hl);
+  }
+
+  &:active:not(:disabled) {
+    transform: translate(0, 0);
+    box-shadow: 0 0 0 var(--hl);
+  }
 }
 
 .secondary-button {
-  color: var(--text);
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+  background: transparent;
+
+  &:hover {
+    background: var(--hl-soft);
+  }
 }
 
 .ghost-button {
   color: var(--muted);
-  border: 1px solid var(--line);
+  border-color: var(--rule-strong);
   background: transparent;
 
   &:hover {
-    color: var(--text);
-    border-color: rgba(56, 232, 176, 0.28);
-    background: rgba(56, 232, 176, 0.07);
+    color: var(--ink);
+    border-color: var(--ink);
+  }
+}
+
+.text-link {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+  background: linear-gradient(var(--hl), var(--hl)) no-repeat 0 92% / 100% 0.4em;
+  transition: background-size 180ms ease;
+
+  &:hover {
+    background-size: 100% 80%;
   }
 }

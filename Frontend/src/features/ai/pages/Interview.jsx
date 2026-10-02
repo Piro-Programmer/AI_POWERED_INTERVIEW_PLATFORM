@@ -1,16 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { generateReport } from "../services/interview.api";
 import "../interview.scss";
-
-const severityClass = (severity) => `severity severity--${severity}`;
-
-const scoreLabel = (score) => {
-  if (score >= 80) return "Strong match";
-  if (score >= 60) return "Good foundation";
-  if (score >= 40) return "Needs focus";
-  return "High improvement area";
-};
+import Wordmark from "../../../components/Wordmark";
+import ReadingSheet from "../components/ReadingSheet";
+import ReportView from "../components/ReportView";
 
 const Interview = () => {
   const [resume, setResume] = useState(null);
@@ -20,6 +14,8 @@ const Interview = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [report, setReport] = useState(null);
+  const [submittedJD, setSubmittedJD] = useState("");
+  const outputRef = useRef(null);
 
   const inputStats = useMemo(() => {
     const jdWords = jobDescription.trim() ? jobDescription.trim().split(/\s+/).length : 0;
@@ -32,6 +28,13 @@ const Interview = () => {
     ];
   }, [resume, selfDescription, jobDescription]);
 
+  // Bring the reading state, then the finished report, into view.
+  useEffect(() => {
+    if (loading || report) {
+      outputRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [loading, report]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -41,6 +44,7 @@ const Interview = () => {
       return;
     }
 
+    setSubmittedJD(jobDescription.trim());
     setLoading(true);
     setReport(null);
     try {
@@ -59,42 +63,38 @@ const Interview = () => {
   return (
     <main className="interview-lab">
       <aside className="lab-sidebar">
-        <Link to="/" className="brand-link">
-          <span className="brand-mark">IP</span>
-          <span>Interview Lab</span>
-        </Link>
+        <Wordmark />
         <nav className="lab-nav" aria-label="Interview workflow">
           <a href="#inputs" className="lab-nav__item lab-nav__item--active">Inputs</a>
           <a href="#report" className="lab-nav__item">Report</a>
           <a href="#prep-plan" className="lab-nav__item">Prep Plan</a>
         </nav>
         <div className="lab-sidebar__note">
-          <strong>Output contract</strong>
-          <span>5 technical questions, 3 behavioral questions, skill gaps, and a 5-day sprint.</span>
+          <strong>What you'll get</strong>
+          <span>Five technical and three behavioral questions, your skill gaps, and a five-day plan.</span>
         </div>
       </aside>
 
       <section className="lab-main">
         <header className="lab-header">
           <div>
-            <p className="eyebrow">AI-powered readiness workspace</p>
-            <h1>Generate a recruiter-grade interview report.</h1>
+            <p className="eyebrow">New report</p>
+            <h1>Mark up a <span className="hl">job description</span>.</h1>
             <p>
-              Feed the platform your candidate signal and job target. The report turns it into
-              interview questions, intent, answers, gaps, and focused practice.
+              Paste the posting and tell us a little about yourself. Gemini reads both and writes the
+              questions you're likely to get, with the reasoning behind each.
             </p>
           </div>
-          <Link to="/" className="button secondary-button">Back to Overview</Link>
+          <Link to="/dashboard" className="button secondary-button">Back to your desk</Link>
         </header>
 
         <section className="lab-grid" id="inputs">
           <form className="generator-panel" onSubmit={handleSubmit}>
             <div className="panel-heading">
               <div>
-                <p className="eyebrow">Step 01</p>
-                <h2>Candidate inputs</h2>
+                <p className="eyebrow">Step 1</p>
+                <h2>The inputs</h2>
               </div>
-              <span className="status-pill">Secure session</span>
             </div>
 
             <label className="file-drop" htmlFor="resume">
@@ -107,27 +107,27 @@ const Interview = () => {
               <span className="file-drop__icon">PDF</span>
               <span>
                 <strong>{resume ? resume.name : "Upload resume PDF"}</strong>
-                <small>{resume ? "Ready for parsing" : "Optional, max 3MB from backend limit"}</small>
+                <small>{resume ? "Attached. We'll read the text from it." : "Optional · PDF up to 3MB"}</small>
               </span>
             </label>
 
             <div className="input-group">
-              <label htmlFor="self">Candidate profile</label>
+              <label htmlFor="self">About you</label>
               <textarea
                 id="self"
                 rows={4}
-                placeholder="Summarize experience, target role, projects, tech stack, and goals."
+                placeholder="A few lines: what you've built, your stack, and the role you want next."
                 value={selfDescription}
                 onChange={(e) => setSelfDescription(e.target.value)}
               />
             </div>
 
             <div className="input-group">
-              <label htmlFor="jd">Target job description *</label>
+              <label htmlFor="jd">The job description (required)</label>
               <textarea
                 id="jd"
                 rows={8}
-                placeholder="Paste the full job description here."
+                placeholder="Paste the whole posting, including the nice-to-haves."
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
               />
@@ -136,15 +136,15 @@ const Interview = () => {
             {error && <p className="error">{error}</p>}
 
             <button className="button primary-button" disabled={loading}>
-              {loading ? "Generating report..." : "Generate Interview Report"}
+              {loading ? "Writing your report…" : report ? "Generate a new report" : "Generate report"}
             </button>
           </form>
 
           <aside className="readiness-panel">
             <div className="panel-heading">
               <div>
-                <p className="eyebrow">Live setup</p>
-                <h2>Input quality</h2>
+                <p className="eyebrow">As you type</p>
+                <h2>What we have so far</h2>
               </div>
             </div>
             <div className="setup-metrics">
@@ -158,140 +158,28 @@ const Interview = () => {
             <div className="signal-card">
               <span className="signal-card__bar" />
               <div>
-                <strong>Best recruiter impression</strong>
-                <p>Use a real JD and a concise project-focused profile to make the report feel credible.</p>
+                <strong>Sharper input, sharper questions</strong>
+                <p>A real posting and a profile that names actual projects beats a polished paragraph.</p>
               </div>
             </div>
-            {loading && (
-              <div className="analysis-loader">
-                <span />
-                <div>
-                  <strong>Analyzing candidate-role fit</strong>
-                  <p>Gemini is building a structured report.</p>
-                </div>
-              </div>
-            )}
           </aside>
         </section>
 
-        {!report && !loading && (
-          <section className="empty-report">
-            <p className="eyebrow">Step 02</p>
-            <h2>Your generated assessment will appear here.</h2>
-            <p>
-              The final report is designed like a hiring-readiness dashboard with question banks,
-              skill gaps, and a preparation sprint.
-            </p>
-          </section>
-        )}
+        <div className="lab-output" ref={outputRef}>
+          {loading && <ReadingSheet text={submittedJD} />}
 
-        {report && (
-          <section className="report-dashboard" id="report">
-            <div className="report-hero">
-              <div>
-                <p className="eyebrow">Generated assessment</p>
-                <h2>{report.title || "Interview Report"}</h2>
-                <p>{scoreLabel(report.matchScore)} based on the provided candidate signal and role target.</p>
-              </div>
-              <div className="score-orbit" style={{ "--score": `${report.matchScore || 0}%` }}>
-                <span>{report.matchScore}</span>
-                <small>match score</small>
-              </div>
-            </div>
-
-            <div className="report-metrics">
-              <div>
-                <span>Technical</span>
-                <strong>{report.technicalQuestions?.length || 0}</strong>
-              </div>
-              <div>
-                <span>Behavioral</span>
-                <strong>{report.behavioralQuestions?.length || 0}</strong>
-              </div>
-              <div>
-                <span>Skill gaps</span>
-                <strong>{report.skillGaps?.length || 0}</strong>
-              </div>
-              <div>
-                <span>Prep days</span>
-                <strong>{report.preparationPlan?.length || 0}</strong>
-              </div>
-            </div>
-
-            <div className="report-columns">
-              <section className="report-block report-block--wide">
-                <div className="section-title">
-                  <p className="eyebrow">Question bank</p>
-                  <h3>Technical Questions</h3>
-                </div>
-                {report.technicalQuestions?.map((q, i) => (
-                  <article key={`tech-${i}`} className="qa-card">
-                    <span className="qa-index">{String(i + 1).padStart(2, "0")}</span>
-                    <div>
-                      <h4>{q.question}</h4>
-                      <p><strong>Why they ask:</strong> {q.intention}</p>
-                      <p><strong>How to answer:</strong> {q.answer}</p>
-                    </div>
-                  </article>
-                ))}
-              </section>
-
-              <section className="report-block">
-                <div className="section-title">
-                  <p className="eyebrow">Risk radar</p>
-                  <h3>Skill Gaps</h3>
-                </div>
-                <ul className="skill-gaps">
-                  {report.skillGaps?.map((gap, i) => (
-                    <li key={`gap-${i}`}>
-                      <span>{gap.skill}</span>
-                      <span className={severityClass(gap.severity)}>{gap.severity}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            </div>
-
-            <section className="report-block">
-              <div className="section-title">
-                <p className="eyebrow">Culture and ownership</p>
-                <h3>Behavioral Questions</h3>
-              </div>
-              <div className="behavior-grid">
-                {report.behavioralQuestions?.map((q, i) => (
-                  <article key={`beh-${i}`} className="behavior-card">
-                    <span>Round {i + 1}</span>
-                    <h4>{q.question}</h4>
-                    <p><strong>Intent:</strong> {q.intention}</p>
-                    <p><strong>Answer:</strong> {q.answer}</p>
-                  </article>
-                ))}
-              </div>
+          {!report && !loading && (
+            <section className="empty-report">
+              <p className="eyebrow">Step 2</p>
+              <h2>Your report will appear here.</h2>
+              <p>
+                Questions with the intent behind them, where you're thin, and a five-day plan to fix it.
+              </p>
             </section>
+          )}
 
-            <section className="report-block" id="prep-plan">
-              <div className="section-title">
-                <p className="eyebrow">Execution plan</p>
-                <h3>Five-Day Preparation Sprint</h3>
-              </div>
-              <div className="timeline">
-                {report.preparationPlan?.map((day, i) => (
-                  <article key={`day-${i}`} className="timeline-item">
-                    <span className="timeline-day">Day {day.day}</span>
-                    <div>
-                      <h4>{day.focus}</h4>
-                      <ul>
-                        {day.tasks?.map((task, j) => (
-                          <li key={`task-${i}-${j}`}>{task}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          </section>
-        )}
+          {report && !loading && <ReportView report={report} />}
+        </div>
       </section>
     </main>
   );
