@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../auth.form.scss";
 import { useAuth } from "../hooks/useAuth";
+import Wordmark from "../../../components/Wordmark";
 
 const Login = () => {
   const { loading, handleLogin } = useAuth();
@@ -14,42 +15,34 @@ const Login = () => {
     e.preventDefault();
     const success = await handleLogin({ email, password });
     if (success) {
-      navigate("/");
+      navigate("/dashboard");
     }
   };
 
   if (loading) {
-    return (
-      <main className="auth-page">
-        <div className="auth-loading">Preparing your workspace...</div>
-      </main>
-    );
+    return <main className="page-loading">opening your desk…</main>;
   }
 
   return (
     <main className="auth-page">
       <section className="auth-showcase">
-        <p className="eyebrow">AI Interview Lab</p>
-        <h1>Practice with the same precision recruiters expect from strong candidates.</h1>
-        <p>
-          Convert resumes and job descriptions into structured interview reports with match signals,
-          questions, answers, and a five-day preparation plan.
-        </p>
-        <div className="auth-stats">
-          <span>JWT Auth</span>
-          <span>Gemini AI</span>
-          <span>Mongo Reports</span>
+        <Wordmark />
+        <div>
+          <p className="eyebrow">Welcome back</p>
+          <h1>Pick up where you left off.</h1>
+          <figure className="auth-snippet">
+            <blockquote>
+              “…you’ll work closely with design in a <span className="auth-circle">fast-paced</span> team,
+              shipping <span className="hl">React</span> features from idea to production…”
+            </blockquote>
+            <figcaption>→ they’ll ask how you handle priorities that change mid-sprint</figcaption>
+          </figure>
         </div>
       </section>
 
       <section className="auth-card">
-        <div className="auth-card__header">
-          <span className="brand-mark brand-mark--small">IP</span>
-          <div>
-            <p className="eyebrow">Welcome back</p>
-            <h2>Login</h2>
-          </div>
-        </div>
+        <h2>Sign in</h2>
+        <p className="auth-card__sub">Your reports and prep plans are saved to your account.</p>
 
         <form onSubmit={handleSubmit}>
           <div className="input-group">
@@ -59,6 +52,7 @@ const Login = () => {
               type="email"
               id="email"
               name="email"
+              autoComplete="email"
               placeholder="you@example.com"
               required
             />
@@ -70,16 +64,16 @@ const Login = () => {
               type="password"
               id="password"
               name="password"
-              placeholder="Enter your password"
+              autoComplete="current-password"
               required
             />
           </div>
 
-          <button className="button primary-button">Open Workspace</button>
+          <button className="button primary-button">Sign in</button>
         </form>
 
         <p className="auth-switch">
-          New to the platform? <Link to="/register">Create an account</Link>
+          New here? <Link className="text-link" to="/register">Create an account</Link>
         </p>
       </section>
     </main>

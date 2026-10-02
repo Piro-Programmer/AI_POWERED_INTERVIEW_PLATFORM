@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { generateReport } from "../services/interview.api";
 import "../interview.scss";
+import Wordmark from "../../../components/Wordmark";
 
 const severityClass = (severity) => `severity severity--${severity}`;
 
@@ -59,42 +60,38 @@ const Interview = () => {
   return (
     <main className="interview-lab">
       <aside className="lab-sidebar">
-        <Link to="/" className="brand-link">
-          <span className="brand-mark">IP</span>
-          <span>Interview Lab</span>
-        </Link>
+        <Wordmark />
         <nav className="lab-nav" aria-label="Interview workflow">
           <a href="#inputs" className="lab-nav__item lab-nav__item--active">Inputs</a>
           <a href="#report" className="lab-nav__item">Report</a>
           <a href="#prep-plan" className="lab-nav__item">Prep Plan</a>
         </nav>
         <div className="lab-sidebar__note">
-          <strong>Output contract</strong>
-          <span>5 technical questions, 3 behavioral questions, skill gaps, and a 5-day sprint.</span>
+          <strong>What you'll get</strong>
+          <span>Five technical and three behavioral questions, your skill gaps, and a five-day plan.</span>
         </div>
       </aside>
 
       <section className="lab-main">
         <header className="lab-header">
           <div>
-            <p className="eyebrow">AI-powered readiness workspace</p>
-            <h1>Generate a recruiter-grade interview report.</h1>
+            <p className="eyebrow">New report</p>
+            <h1>Mark up a <span className="hl">job description</span>.</h1>
             <p>
-              Feed the platform your candidate signal and job target. The report turns it into
-              interview questions, intent, answers, gaps, and focused practice.
+              Paste the posting and tell us a little about yourself. Gemini reads both and writes the
+              questions you're likely to get, with the reasoning behind each.
             </p>
           </div>
-          <Link to="/" className="button secondary-button">Back to Overview</Link>
+          <Link to="/dashboard" className="button secondary-button">Back to your desk</Link>
         </header>
 
         <section className="lab-grid" id="inputs">
           <form className="generator-panel" onSubmit={handleSubmit}>
             <div className="panel-heading">
               <div>
-                <p className="eyebrow">Step 01</p>
-                <h2>Candidate inputs</h2>
+                <p className="eyebrow">Step 1</p>
+                <h2>The inputs</h2>
               </div>
-              <span className="status-pill">Secure session</span>
             </div>
 
             <label className="file-drop" htmlFor="resume">
@@ -107,27 +104,27 @@ const Interview = () => {
               <span className="file-drop__icon">PDF</span>
               <span>
                 <strong>{resume ? resume.name : "Upload resume PDF"}</strong>
-                <small>{resume ? "Ready for parsing" : "Optional, max 3MB from backend limit"}</small>
+                <small>{resume ? "Attached. We'll read the text from it." : "Optional · PDF up to 3MB"}</small>
               </span>
             </label>
 
             <div className="input-group">
-              <label htmlFor="self">Candidate profile</label>
+              <label htmlFor="self">About you</label>
               <textarea
                 id="self"
                 rows={4}
-                placeholder="Summarize experience, target role, projects, tech stack, and goals."
+                placeholder="A few lines: what you've built, your stack, and the role you want next."
                 value={selfDescription}
                 onChange={(e) => setSelfDescription(e.target.value)}
               />
             </div>
 
             <div className="input-group">
-              <label htmlFor="jd">Target job description *</label>
+              <label htmlFor="jd">The job description (required)</label>
               <textarea
                 id="jd"
                 rows={8}
-                placeholder="Paste the full job description here."
+                placeholder="Paste the whole posting, including the nice-to-haves."
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
               />
@@ -136,15 +133,15 @@ const Interview = () => {
             {error && <p className="error">{error}</p>}
 
             <button className="button primary-button" disabled={loading}>
-              {loading ? "Generating report..." : "Generate Interview Report"}
+              {loading ? "Writing your report…" : "Generate report"}
             </button>
           </form>
 
           <aside className="readiness-panel">
             <div className="panel-heading">
               <div>
-                <p className="eyebrow">Live setup</p>
-                <h2>Input quality</h2>
+                <p className="eyebrow">As you type</p>
+                <h2>What we have so far</h2>
               </div>
             </div>
             <div className="setup-metrics">
@@ -158,16 +155,16 @@ const Interview = () => {
             <div className="signal-card">
               <span className="signal-card__bar" />
               <div>
-                <strong>Best recruiter impression</strong>
-                <p>Use a real JD and a concise project-focused profile to make the report feel credible.</p>
+                <strong>Sharper input, sharper questions</strong>
+                <p>A real posting and a profile that names actual projects beats a polished paragraph.</p>
               </div>
             </div>
             {loading && (
               <div className="analysis-loader">
                 <span />
                 <div>
-                  <strong>Analyzing candidate-role fit</strong>
-                  <p>Gemini is building a structured report.</p>
+                  <strong>Reading the role against your profile</strong>
+                  <p>Gemini is writing your questions and plan. Keep this tab open.</p>
                 </div>
               </div>
             )}
@@ -176,11 +173,10 @@ const Interview = () => {
 
         {!report && !loading && (
           <section className="empty-report">
-            <p className="eyebrow">Step 02</p>
-            <h2>Your generated assessment will appear here.</h2>
+            <p className="eyebrow">Step 2</p>
+            <h2>Your report will appear here.</h2>
             <p>
-              The final report is designed like a hiring-readiness dashboard with question banks,
-              skill gaps, and a preparation sprint.
+              Questions with the intent behind them, where you're thin, and a five-day plan to fix it.
             </p>
           </section>
         )}
@@ -189,9 +185,9 @@ const Interview = () => {
           <section className="report-dashboard" id="report">
             <div className="report-hero">
               <div>
-                <p className="eyebrow">Generated assessment</p>
+                <p className="eyebrow">Your report</p>
                 <h2>{report.title || "Interview Report"}</h2>
-                <p>{scoreLabel(report.matchScore)} based on the provided candidate signal and role target.</p>
+                <p>{scoreLabel(report.matchScore)} for this role, based on what you shared.</p>
               </div>
               <div className="score-orbit" style={{ "--score": `${report.matchScore || 0}%` }}>
                 <span>{report.matchScore}</span>
@@ -221,7 +217,7 @@ const Interview = () => {
             <div className="report-columns">
               <section className="report-block report-block--wide">
                 <div className="section-title">
-                  <p className="eyebrow">Question bank</p>
+                  <p className="eyebrow">Technical</p>
                   <h3>Technical Questions</h3>
                 </div>
                 {report.technicalQuestions?.map((q, i) => (
@@ -238,7 +234,7 @@ const Interview = () => {
 
               <section className="report-block">
                 <div className="section-title">
-                  <p className="eyebrow">Risk radar</p>
+                  <p className="eyebrow">Where you're thin</p>
                   <h3>Skill Gaps</h3>
                 </div>
                 <ul className="skill-gaps">
@@ -254,7 +250,7 @@ const Interview = () => {
 
             <section className="report-block">
               <div className="section-title">
-                <p className="eyebrow">Culture and ownership</p>
+                <p className="eyebrow">How you work</p>
                 <h3>Behavioral Questions</h3>
               </div>
               <div className="behavior-grid">
@@ -271,8 +267,8 @@ const Interview = () => {
 
             <section className="report-block" id="prep-plan">
               <div className="section-title">
-                <p className="eyebrow">Execution plan</p>
-                <h3>Five-Day Preparation Sprint</h3>
+                <p className="eyebrow">The plan</p>
+                <h3>Five-Day Plan</h3>
               </div>
               <div className="timeline">
                 {report.preparationPlan?.map((day, i) => (
