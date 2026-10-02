@@ -9,10 +9,22 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
+// Comma-separated list of frontend origins allowed to call the API directly,
+// e.g. "https://your-app.vercel.app,http://localhost:5173".
+const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: allowedOrigins,
   credentials: true
 }));
+
+// Lightweight check for hosting platforms (e.g. Render's health check path)
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
 
 app.use("/api/auth", authRouter);
 app.use("/api/interview", interviewRouter);
