@@ -3,6 +3,19 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import tokenBlacklistModel from "../models/blacklist.model.js";
 
+// In production the cookie is only sent over HTTPS. SameSite defaults to "lax",
+// which works when the frontend proxies /api to this server (same site).
+// Set COOKIE_SAMESITE=none only if the frontend calls this API cross-site.
+const isProduction = process.env.NODE_ENV === "production";
+const sameSite = (process.env.COOKIE_SAMESITE || "lax").toLowerCase();
+
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProduction || sameSite === "none",
+  sameSite,
+  path: "/"
+};
+
 /**
  * @name registerUserController
  * @description register a new user,ecpects username, email, password in the request
@@ -43,9 +56,7 @@ async function registerUserController(req, res) {
   );
 
   res.cookie("token", token, {
-    httpOnly: true,
-    secure: false,
-    path: "/",
+    ...cookieOptions,
     maxAge: 24 * 60 * 60 * 1000
   });
 
@@ -89,9 +100,7 @@ async function loginUserController(req, res) {
   );
 
   res.cookie("token", token, {
-    httpOnly: true,
-    secure: false,
-    path: "/",
+    ...cookieOptions,
     maxAge: 24 * 60 * 60 * 1000
   });
   res.status(200).json({
@@ -111,7 +120,7 @@ async function logoutUserController(req, res) {
     await tokenBlacklistModel.create({ token });
   }
 
-  res.clearCookie("token");
+  res.clearCookie("token", cookieOptions);
 
   res.status(200).json({
     message: "User logged out successfully"
