@@ -103,7 +103,9 @@ AI_POWERED_INTERVIEW_PLATFORM/
 
 ### AI Integration
 
-- Gemini API through `@google/genai`
+- Groq (`groq-sdk`, default model `openai/gpt-oss-120b`) when `GROQ_API_KEY` is set
+- Otherwise Gemini through `@google/genai` (default model `gemini-2.5-flash`)
+- Responses are validated against a Zod schema and retried up to 3 times
 
 ## Installation & Setup
 
@@ -127,8 +129,10 @@ Create a `.env` file inside `Backend`:
 PORT=3000
 MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
-GOOGLE_GENAI_API_KEY=your_google_genai_api_key
+GROQ_API_KEY=your_groq_api_key
 ```
+
+To use Gemini instead, leave `GROQ_API_KEY` out and set `GOOGLE_GENAI_API_KEY`.
 
 Run backend:
 
@@ -181,7 +185,7 @@ The recommended setup is the **backend on Render** (a normal long-running Node s
    ```env
    MONGO_URI=your_mongodb_connection_string
    JWT_SECRET=a_long_random_string
-   GOOGLE_GENAI_API_KEY=your_google_genai_api_key
+   GROQ_API_KEY=your_groq_api_key
    NODE_ENV=production
    ```
 
