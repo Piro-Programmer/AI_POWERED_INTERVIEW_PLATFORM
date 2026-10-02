@@ -1,10 +1,12 @@
-# AI-Powered Interview Preparation Platform (MERN + Gemini)
+# Interview Lab: AI-Powered Interview Preparation (MERN + Groq)
+
+**Live demo:** https://ai-powered-interview-platform-gamma.vercel.app
 
 ## Overview
 
-This is a full-stack web application built with the MERN stack and Gemini API to help users prepare for interviews in a focused, role-specific way.
+Interview Lab is a full-stack web application built with the MERN stack and the Groq API. It helps candidates prepare for interviews in a focused, role-specific way.
 
-Users can register or log in, upload an optional resume PDF, enter a self description and job description, and generate a structured interview preparation report.
+Paste a job description, optionally upload your resume, and get a structured report: a match score, the questions you're likely to be asked (with the intent behind each and how to answer), your skill gaps, and a five-day preparation plan.
 
 ## Problem Statement
 
@@ -20,40 +22,51 @@ The platform takes:
 - User self description
 - Job description
 
-Then Gemini generates:
+Then the AI model (Groq) generates:
 
 - Match score
 - Technical interview questions
 - Behavioral interview questions
-- Suggested answers
-- Skill gaps
+- Suggested answers and the intent behind each question
+- Skill gaps with severity
 - Five-day preparation plan
 
-Reports are saved in MongoDB for the logged-in user.
+Every response is validated against a strict schema before it reaches the user, and reports are saved in MongoDB for the logged-in user.
 
 ## Features
 
-- User registration, login, logout, and protected routes
-- JWT cookie based authentication
-- Optional PDF resume upload
-- Job description and self-description input
-- Gemini-powered structured interview report generation
-- Match score, questions, answers, skill gaps, and preparation plan
+**Public landing page**
+- Live, in-browser job description markup demo, with no account needed: skills are highlighted, people skills underlined and recruiter phrases circled, each with a margin note
+- Paste your own job description, or select any phrase to mark it yourself
+
+**Report**
+- Match score that counts up inside a hand-drawn ring that closes only as far as the score
+- Skill gaps highlighted inside your own job description, each linked to the plan day that covers it
+- Questions fold away until opened, so you can answer out loud first
+- Five-day plan as a checklist with progress, remembered in the browser
+- While the report generates, your job description is shown being read, with an elapsed timer
+
+**Platform**
+- Registration, login, logout and protected routes
+- JWT authentication in an HTTP-only cookie
+- Optional PDF resume upload with text extraction
+- AI report generation with Groq (Gemini supported as a fallback)
 - MongoDB persistence for interview reports
-- React + Vite frontend
-- Express REST API backend
+- React + Vite frontend, Express REST API backend
+- Deployed with the frontend on Vercel and the backend on Render
 
 ## How It Works
 
 1. User registers or logs in.
-2. User opens the interview report page.
-3. User uploads a resume PDF, optionally enters self description, and pastes the job description.
+2. User opens the new report page.
+3. User uploads a resume PDF, optionally enters a self description, and pastes the job description.
 4. Frontend sends multipart form data to the backend.
 5. Backend authenticates the user through the JWT cookie.
 6. Backend extracts resume text from the PDF.
-7. Backend calls Gemini API for a structured JSON report.
-8. Backend saves the report in MongoDB with a readable title.
-9. Frontend displays the generated report.
+7. Backend asks Groq for a JSON report that follows the report schema.
+8. Backend validates the response with Zod, retrying up to 3 times if it doesn't match.
+9. Backend saves the report in MongoDB with a readable title.
+10. Frontend displays the generated report.
 
 ## Project Structure
 
@@ -61,21 +74,31 @@ Reports are saved in MongoDB for the logged-in user.
 AI_POWERED_INTERVIEW_PLATFORM/
 ├── Backend/
 │   ├── src/
-│   │   ├── config/
-│   │   ├── controllers/
-│   │   ├── middlewares/
-│   │   ├── models/
+│   │   ├── config/          # MongoDB connection
+│   │   ├── controllers/     # auth and interview handlers
+│   │   ├── middlewares/     # auth check, file upload
+│   │   ├── models/          # user, report, token blacklist
 │   │   ├── routes/
-│   │   └── services/
+│   │   ├── services/        # AI report generation (Groq / Gemini)
+│   │   └── app.js           # Express app, CORS, health check
+│   ├── .env.example
 │   ├── package.json
 │   └── server.js
 ├── Frontend/
 │   ├── src/
+│   │   ├── components/      # shared UI (marked-up job description sheet, wordmark)
 │   │   ├── features/
+│   │   │   ├── ai/          # new report page and report components
+│   │   │   ├── auth/        # login, register, auth state
+│   │   │   └── landing/     # landing page demo
+│   │   ├── lib/             # shared API client
+│   │   ├── pages/           # landing page, dashboard
 │   │   ├── app.router.jsx
 │   │   └── main.jsx
+│   ├── .env.example
 │   ├── package.json
-│   └── vite.config.js
+│   ├── vercel.json          # /api proxy to the backend + client-side routing
+│   └── vite.config.js       # /api proxy in development
 ├── .gitignore
 └── README.md
 ```
@@ -103,9 +126,15 @@ AI_POWERED_INTERVIEW_PLATFORM/
 
 ### AI Integration
 
-- Groq (`groq-sdk`, default model `openai/gpt-oss-120b`) when `GROQ_API_KEY` is set
-- Otherwise Gemini through `@google/genai` (default model `gemini-2.5-flash`)
+- Groq through `groq-sdk` (default model `openai/gpt-oss-120b`), used when `GROQ_API_KEY` is set
+- Gemini through `@google/genai` (default model `gemini-2.5-flash`), used only when `GROQ_API_KEY` is not set
 - Responses are validated against a Zod schema and retried up to 3 times
+
+### Hosting
+
+- Frontend: Vercel
+- Backend: Render
+- Database: MongoDB Atlas
 
 ## Installation & Setup
 
@@ -123,7 +152,7 @@ cd Backend
 npm install
 ```
 
-Create a `.env` file inside `Backend`:
+Create a `.env` file inside `Backend` (see `Backend/.env.example` for every option):
 
 ```env
 PORT=3000
@@ -132,7 +161,9 @@ JWT_SECRET=your_jwt_secret
 GROQ_API_KEY=your_groq_api_key
 ```
 
-To use Gemini instead, leave `GROQ_API_KEY` out and set `GOOGLE_GENAI_API_KEY`.
+Get a Groq API key at https://console.groq.com/keys. To use a different Groq model, set `GROQ_MODEL`.
+
+To use Gemini instead, leave `GROQ_API_KEY` out and set `GOOGLE_GENAI_API_KEY` (optionally `GEMINI_MODEL`).
 
 Run backend:
 
@@ -170,7 +201,7 @@ In development, Vite proxies `/api` requests to `http://localhost:3000` (see `Fr
 
 ## Deployment
 
-The recommended setup is the **backend on Render** (a normal long-running Node server, so slow Gemini calls aren't cut off) and the **frontend on Vercel**. Vercel forwards `/api/*` to Render, so the browser only ever talks to your Vercel domain and the login cookie stays first-party.
+The project runs with the **backend on Render** (a normal long-running Node server, so AI calls aren't cut off by serverless time limits) and the **frontend on Vercel**. Vercel forwards `/api/*` to Render, so the browser only ever talks to the Vercel domain and the login cookie stays first-party.
 
 ### 1. Backend on Render
 
@@ -195,7 +226,7 @@ On Render's free plan the service sleeps when idle, so the first request after a
 
 ### 2. Point the frontend at the backend
 
-In `Frontend/vercel.json`, replace `YOUR-BACKEND.onrender.com` with your Render URL, then commit and push.
+`Frontend/vercel.json` forwards `/api/(.*)` to this project's Render service. If you deploy your own copy, replace the Render URL there with yours, then commit and push.
 
 ### 3. Frontend on Vercel
 
@@ -218,8 +249,8 @@ If you'd rather not proxy through Vercel, set `VITE_API_URL=https://<your-servic
 | 2 | User submits resume, self description, and job description |
 | 3 | Frontend sends multipart form data |
 | 4 | Backend authenticates user and parses resume |
-| 5 | Gemini generates structured report |
-| 6 | Backend saves report in MongoDB |
+| 5 | Groq generates the structured report |
+| 6 | Backend validates it and saves it in MongoDB |
 | 7 | Data is returned to the UI |
 
 ## Main API Routes
@@ -233,23 +264,23 @@ GET  /api/auth/logout
 GET  /api/auth/get-me
 ```
 
+### Interview Reports
+
+```text
+POST /api/interview
+GET  /api/interview
+```
+
 ### Health
 
 ```text
 GET  /api/health
 ```
 
-### Interview Reports
-
-```text
-POST /api/interview/
-GET  /api/interview/
-```
-
 ## Future Improvements
 
 - Report history page in the frontend
-- Mock interview mode, question by question
+- Practice mode: flashcards with a timer and re-drilling weak answers
 - AI-based answer evaluation
 - Voice-based interview practice
 - Performance scoring dashboard
@@ -257,14 +288,15 @@ GET  /api/interview/
 
 ## Interview Explanation
 
-I built an AI-powered interview preparation platform using the MERN stack and Gemini API. Users can log in, upload a resume, add their profile and job description, and generate a structured interview report with questions, answers, skill gaps, match score, and a preparation plan.
+I built Interview Lab, an AI-powered interview preparation platform using the MERN stack and the Groq API. Users paste a job description, optionally upload a resume, and get a structured report: match score, likely technical and behavioral questions with the intent behind each, skill gaps highlighted inside the job description, and a five-day plan they can tick off. The AI output is validated against a Zod schema before it's saved, and the app is deployed with the frontend on Vercel proxying to an Express backend on Render.
 
 ## What This Project Shows
 
 - Full-stack development with MERN
-- Authentication with JWT cookies
+- Authentication with HTTP-only JWT cookies
 - File upload and PDF parsing
-- LLM integration in a real-world workflow
+- LLM integration with schema-validated, retried structured output
 - REST API design
 - MongoDB data persistence
-- Frontend-backend integration
+- Production deployment across Vercel and Render with a same-origin API proxy
+- A distinctive, interactive UI built without a component library
