@@ -10,12 +10,12 @@ export async function generateReport({ resume, selfDescription, jobDescription }
   if (selfDescription) formData.append("selfDescription", selfDescription);
   formData.append("jobDescription", jobDescription);
 
-  const response = await api.post("/api/interview/", formData);
+  const response = await api.post("/api/interview", formData);
   return response.data;
 }
 
 /** Fetch the logged-in user's past interview reports. */
 export async function getMyReports() {
-  const response = await api.get("/api/interview/");
+  const response = await api.get("/api/interview");
   return response.data;
 }
