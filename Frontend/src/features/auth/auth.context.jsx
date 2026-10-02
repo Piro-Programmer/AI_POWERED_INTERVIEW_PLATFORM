@@ -11,11 +11,16 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const getAndSetUser = async () => {
-      const data = await getMe()
-      if (data && data.user) {
-        setUser(data.user)
+      try {
+        const data = await getMe()
+        if (data && data.user) {
+          setUser(data.user)
+        }
+      } catch {
+        // API unreachable: treat as signed out so public pages still work
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     getAndSetUser()

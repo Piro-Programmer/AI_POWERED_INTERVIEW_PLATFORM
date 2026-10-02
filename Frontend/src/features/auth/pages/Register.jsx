@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import "../auth.form.scss";
+import Wordmark from "../../../components/Wordmark";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -14,41 +15,33 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     await handleRegister({ username, email, password });
-    navigate("/");
+    navigate("/dashboard");
   };
 
   if (loading) {
-    return (
-      <main className="auth-page">
-        <div className="auth-loading">Creating secure workspace...</div>
-      </main>
-    );
+    return <main className="page-loading">setting up your desk…</main>;
   }
 
   return (
     <main className="auth-page">
       <section className="auth-showcase">
-        <p className="eyebrow">Candidate readiness system</p>
-        <h1>Create interview reports that look like real product output.</h1>
-        <p>
-          Your project now presents a complete flow: account access, resume input, AI analysis,
-          and a professional preparation report.
-        </p>
-        <div className="auth-stats">
-          <span>Resume PDF</span>
-          <span>JD Fit</span>
-          <span>Prep Sprint</span>
+        <Wordmark />
+        <div>
+          <p className="eyebrow">Before your next interview</p>
+          <h1>Read the job description the way they wrote it.</h1>
+          <figure className="auth-snippet">
+            <blockquote>
+              “…<span className="auth-circle">3+ years</span> of experience with <span className="hl">SQL</span> and
+              a <span className="auth-underline">collaborative</span> approach to stakeholders…”
+            </blockquote>
+            <figcaption>→ have one story about disagreeing with someone, and how it ended</figcaption>
+          </figure>
         </div>
       </section>
 
       <section className="auth-card">
-        <div className="auth-card__header">
-          <span className="brand-mark brand-mark--small">IP</span>
-          <div>
-            <p className="eyebrow">Start focused</p>
-            <h2>Create account</h2>
-          </div>
-        </div>
+        <h2>Create an account</h2>
+        <p className="auth-card__sub">So your reports are still here next week.</p>
 
         <form onSubmit={handleSubmit}>
           <div className="input-group">
@@ -58,7 +51,8 @@ const Register = () => {
               type="text"
               id="username"
               name="username"
-              placeholder="Your name"
+              autoComplete="username"
+              placeholder="Pick a username"
               required
             />
           </div>
@@ -70,6 +64,7 @@ const Register = () => {
               type="email"
               id="email"
               name="email"
+              autoComplete="email"
               placeholder="you@example.com"
               required
             />
@@ -81,16 +76,16 @@ const Register = () => {
               type="password"
               id="password"
               name="password"
-              placeholder="Create a password"
+              autoComplete="new-password"
               required
             />
           </div>
 
-          <button className="button primary-button">Create Workspace</button>
+          <button className="button primary-button">Create account</button>
         </form>
 
         <p className="auth-switch">
-          Already have an account? <Link to="/login">Login</Link>
+          Already have one? <Link className="text-link" to="/login">Sign in</Link>
         </p>
       </section>
     </main>

@@ -1,0 +1,553 @@
+// The generated report: one annotated document, read top to bottom.
+
+.report {
+  margin-top: 2.5rem;
+  scroll-margin-top: 1.5rem;
+
+  &__hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 3rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 2px solid var(--ink);
+
+    h2 {
+      max-width: 22ch;
+      margin-top: 0.6rem;
+      font-size: clamp(2rem, 4.4vw, 3.5rem);
+      line-height: 1.04;
+    }
+  }
+
+  &__summary {
+    margin-top: 0.9rem;
+    font-size: 1.05rem;
+    color: var(--ink-2);
+  }
+
+  &__jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.25rem;
+    margin-top: 1.5rem;
+
+    a {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--ink);
+      text-decoration: none;
+      background: linear-gradient(var(--hl), var(--hl)) no-repeat 0 100% / 100% 0.3em;
+      transition: background-size 160ms ease;
+
+      &:hover {
+        background-size: 100% 100%;
+      }
+    }
+  }
+
+  &__section {
+    margin-top: 4rem;
+    scroll-margin-top: 1.5rem;
+  }
+
+  &__head {
+    margin-bottom: 1.5rem;
+
+    h3 {
+      margin-top: 0.4rem;
+      font-size: clamp(1.6rem, 3vw, 2.3rem);
+      line-height: 1.1;
+    }
+  }
+}
+
+// --- score
+
+.dial {
+  text-align: center;
+
+  &__num {
+    position: relative;
+    display: inline-block;
+    padding: 0 0.22em;
+    font-family: var(--serif);
+    font-size: clamp(6rem, 11vw, 9rem);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.05em;
+    font-variation-settings: 'opsz' 144;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  &__ring {
+    position: absolute;
+    inset: -12% -14%;
+    width: 128%;
+    height: 124%;
+    overflow: visible;
+    pointer-events: none;
+
+    path {
+      fill: none;
+      stroke-linecap: round;
+      vector-effect: non-scaling-stroke;
+    }
+  }
+
+  &__track {
+    stroke: var(--rule-strong);
+    stroke-width: 1.5;
+    stroke-dasharray: 0.006 0.014;
+  }
+
+  &__stroke {
+    stroke: var(--pen);
+    stroke-width: 3.5;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: dial-draw 1400ms cubic-bezier(0.33, 0, 0.2, 1) 150ms forwards;
+  }
+
+  figcaption {
+    margin-top: 1.4rem;
+
+    p {
+      max-width: 15rem;
+      margin: 0.3rem auto 0;
+      font-family: var(--hand);
+      font-size: 1.45rem;
+      line-height: 1.12;
+      color: var(--ink-2);
+    }
+  }
+}
+
+@keyframes dial-draw {
+  to {
+    stroke-dashoffset: var(--gap);
+  }
+}
+
+// --- gaps that the posting implies but never names
+
+.gap-extra {
+  margin-top: 1.75rem;
+
+  ul {
+    list-style: none;
+    margin-top: 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+    gap: 1rem;
+  }
+
+  &__item {
+    padding: 0.9rem 1rem 1rem;
+    border: 1px dashed var(--rule-strong);
+    border-radius: var(--radius);
+
+    p {
+      margin-top: 0.45rem;
+      font-family: var(--hand);
+      font-size: 1.22rem;
+      line-height: 1.12;
+      color: var(--ink-2);
+    }
+  }
+
+  &__skill {
+    font-family: var(--serif);
+    font-size: 1.15rem;
+    font-weight: 600;
+    padding: 0 0.12em;
+
+    .gap-extra__item--high & {
+      background: linear-gradient(var(--hl), var(--hl)) no-repeat 0 70% / 100% 75%;
+    }
+
+    .gap-extra__item--medium & {
+      background: linear-gradient(var(--hl), var(--hl)) no-repeat 0 92% / 100% 38%;
+    }
+
+    .gap-extra__item--low & {
+      text-decoration: underline dotted var(--ink-2);
+      text-underline-offset: 4px;
+    }
+  }
+
+  &__sev {
+    margin-left: 0.6rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+}
+
+// --- folding questions
+
+.qset__bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem 1.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.hand {
+  font-family: var(--hand);
+  font-size: 1.35rem;
+  line-height: 1.15;
+  color: var(--pen);
+}
+
+.qset__all {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration-color: var(--hl);
+    text-decoration-thickness: 3px;
+  }
+}
+
+.qset {
+  border-top: 1px solid var(--ink);
+}
+
+.fold {
+  border-bottom: 1px dashed var(--rule-strong);
+
+  h4 {
+    font: inherit;
+  }
+
+  &__head {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 2.75rem minmax(0, 1fr) 1.5rem;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 1.15rem 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover .fold__index {
+      color: var(--ink);
+    }
+  }
+
+  &__index {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 1.3rem;
+    color: var(--pen);
+    transition: color 140ms ease;
+  }
+
+  &__q {
+    font-family: var(--serif);
+    font-size: 1.15rem;
+    font-weight: 600;
+    line-height: 1.38;
+    color: var(--ink);
+    // opening a question highlights it, like marking it as the one you're on
+    background: linear-gradient(var(--hl), var(--hl)) no-repeat 0 92% / 0% 38%;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    transition: background-size 380ms cubic-bezier(0.6, 0, 0.3, 1);
+  }
+
+  &.is-open &__q {
+    background-size: 100% 38%;
+  }
+
+  &__icon {
+    position: relative;
+    width: 0.9rem;
+    height: 0.9rem;
+    align-self: center;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 1.5px;
+      background: var(--ink);
+      transition: transform 260ms ease;
+    }
+
+    &::after {
+      transform: rotate(90deg);
+    }
+  }
+
+  &.is-open &__icon::after {
+    transform: rotate(0deg);
+  }
+
+  &__body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 320ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  &.is-open &__body {
+    grid-template-rows: 1fr;
+  }
+
+  &__inner {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  dl {
+    display: grid;
+    grid-template-columns: 8.5rem minmax(0, 1fr);
+    gap: 0.6rem 1.25rem;
+    padding: 0 2.25rem 1.5rem 3.5rem;
+  }
+
+  dt {
+    padding-top: 0.2rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  dd {
+    color: var(--ink-2);
+  }
+}
+
+// --- plan
+
+.plan-progress {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  &__bar {
+    flex: 1;
+    height: 0.5rem;
+    border: 1px solid var(--ink);
+    background: var(--paper-raised);
+
+    span {
+      display: block;
+      height: 100%;
+      background: var(--ink);
+      transition: width 400ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+  }
+
+  p {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  strong {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  &__reset {
+    margin-left: 0.75rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--muted);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+}
+
+.plan-days {
+  list-style: none;
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--ink);
+}
+
+.plan-day {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1.25rem 0;
+  border-bottom: 1px dashed var(--rule-strong);
+
+  &__label {
+    position: relative;
+    align-self: start;
+    justify-self: start;
+    font-family: var(--hand);
+    font-size: 1.75rem;
+    line-height: 1;
+    color: var(--pen);
+
+    // a finished day gets crossed off
+    &::after {
+      content: '';
+      position: absolute;
+      left: -0.15em;
+      right: -0.15em;
+      top: 52%;
+      height: 2.5px;
+      border-radius: 2px;
+      background: var(--pen);
+      transform: rotate(-7deg) scaleX(0);
+      transform-origin: left center;
+      transition: transform 360ms cubic-bezier(0.6, 0, 0.3, 1);
+    }
+  }
+
+  &.is-complete &__label::after {
+    transform: rotate(-7deg) scaleX(1);
+  }
+
+  h4 {
+    margin-bottom: 0.55rem;
+    font-family: var(--serif);
+    font-size: 1.15rem;
+    transition: color 200ms ease;
+  }
+
+  &.is-complete h4 {
+    color: var(--muted);
+  }
+
+  ul {
+    list-style: none;
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    cursor: pointer;
+  }
+
+  input {
+    flex: 0 0 auto;
+    width: 1.05rem;
+    height: 1.05rem;
+    margin-top: 0.22rem;
+    accent-color: var(--ink);
+    cursor: pointer;
+  }
+
+  label span {
+    color: var(--ink-2);
+    text-decoration: line-through transparent;
+    text-decoration-thickness: 2px;
+    transition:
+      color 200ms ease,
+      text-decoration-color 200ms ease;
+  }
+
+  input:checked + span {
+    color: var(--muted);
+    text-decoration-color: var(--pen);
+  }
+}
+
+// --- reading state
+
+.reading {
+  margin-top: 2.5rem;
+
+  &__status {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    margin-bottom: 1.25rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--ink);
+    background: var(--paper-raised);
+
+    p {
+      flex: 1;
+      font-size: 0.95rem;
+      color: var(--ink-2);
+    }
+
+    strong {
+      color: var(--ink);
+    }
+  }
+
+  &__dot {
+    width: 0.8rem;
+    height: 0.8rem;
+    flex: 0 0 auto;
+    margin-top: 0.35rem;
+    border: 1.5px solid var(--ink);
+    border-radius: 50%;
+    background: var(--hl);
+    animation: reading-pulse 1.2s ease-in-out infinite;
+  }
+
+  &__timer {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@keyframes reading-pulse {
+  50% {
+    transform: scale(0.6);
+  }
+}
+
+// --- responsive
+
+@media (max-width: 760px) {
+  .report__hero {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .dial {
+    justify-self: start;
+    text-align: left;
+
+    figcaption p {
+      margin-left: 0;
+    }
+  }
+
+  .fold dl {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+    padding: 0 0 1.4rem;
+
+    dd + dt {
+      margin-top: 0.7rem;
+    }
+  }
+}
+
+@media (max-width: 520px) {
+  .plan-day {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+}

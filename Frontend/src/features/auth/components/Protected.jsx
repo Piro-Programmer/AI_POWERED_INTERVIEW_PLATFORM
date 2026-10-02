@@ -7,7 +7,7 @@ const Protected = ({ children }) => {
   const { loading, user } = useAuth()
 
   if (loading) {
-    return (<main><h1>Loading.......</h1></main>)
+    return (<main className="page-loading">opening your desk…</main>)
   }
 
   if (!user) {
