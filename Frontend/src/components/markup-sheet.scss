@@ -1,0 +1,427 @@
+// Shared by the landing demo and the report's gap sheet.
+
+.sheet {
+  position: relative;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: 0 0.25rem 0.25rem 0.25rem;
+  box-shadow: var(--shadow-paper);
+
+  &__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+    padding: 0.85rem 1.5rem;
+    border-bottom: 1px dashed var(--rule);
+  }
+
+  &__legend {
+    display: flex;
+    gap: 1rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
+  }
+
+  &__body {
+    position: relative;
+    padding: 1.75rem clamp(1.25rem, 3vw, 2.25rem) 2.25rem;
+    font-family: var(--serif);
+    font-size: 1.07rem;
+    line-height: 1.95;
+    font-variation-settings: 'opsz' 14;
+    color: var(--ink-2);
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+
+  &__notes {
+    position: relative;
+    list-style: none;
+    padding: 1.75rem 1.1rem 2rem 1.4rem;
+    // notebook margin: two thin red rules
+    border-left: 3px double rgba(200, 67, 43, 0.45);
+  }
+
+  &__empty,
+  &__more {
+    padding: 0.85rem 1.5rem;
+    border-top: 1px dashed var(--rule);
+    color: var(--muted);
+    font-size: 0.88rem;
+  }
+}
+
+// hover note for marks that didn't get a margin spot
+.peek {
+  position: absolute;
+  z-index: 3;
+  padding: 0.55rem 0.8rem 0.65rem;
+  background: var(--paper-raised);
+  border: 1px solid var(--ink);
+  border-radius: 0.3rem;
+  box-shadow: 4px 4px 0 var(--hl);
+  white-space: normal;
+  pointer-events: none;
+  animation: peek-in 160ms ease-out;
+
+  p {
+    font-family: var(--hand);
+    font-size: 1.25rem;
+    line-height: 1.12;
+    color: var(--ink);
+  }
+}
+
+@keyframes peek-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.swatch {
+  display: inline-block;
+  width: 1.1rem;
+  height: 0.7rem;
+
+  &--skill {
+    background: var(--hl);
+  }
+
+  &--people {
+    height: 0.15rem;
+    background: var(--pen);
+  }
+
+  &--signal {
+    width: 0.9rem;
+    height: 0.9rem;
+    border: 1.5px solid var(--pen);
+    border-radius: 50%;
+  }
+}
+
+// --- the marks themselves
+
+.mk {
+  position: relative;
+  padding: 0 0.12em;
+  margin: 0 -0.04em;
+  color: var(--ink);
+  background: none;
+  cursor: help;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  border-radius: 0.15em;
+  transition:
+    outline-color 140ms ease,
+    background-color 140ms ease;
+  outline: 1.5px solid transparent;
+  outline-offset: 1px;
+
+  sup {
+    margin-left: 0.15em;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    font-weight: 500;
+    color: var(--pen);
+    opacity: 0;
+    animation: fade-in 300ms ease var(--d) forwards;
+  }
+
+  &.is-active {
+    outline-color: var(--ink);
+  }
+
+  &--skill {
+    background-image: linear-gradient(
+      100deg,
+      transparent 0.1em,
+      var(--hl) 0.25em,
+      var(--hl) calc(100% - 0.25em),
+      transparent calc(100% - 0.05em)
+    );
+    background-repeat: no-repeat;
+    background-position: 0 65%;
+    animation: mk-sweep 520ms cubic-bezier(0.6, 0, 0.3, 1) var(--d) both;
+  }
+
+  &--people {
+    background-image: linear-gradient(var(--pen), var(--pen));
+    background-repeat: no-repeat;
+    background-position: 0 92%;
+    animation: mk-underline 480ms ease-out var(--d) both;
+  }
+
+  &--signal {
+    border: 1.5px solid var(--pen);
+    // uneven radii read as a quick pen circle
+    border-radius: 255px 18px 225px 18px / 18px 225px 18px 255px;
+    padding: 0 0.3em;
+    margin: 0 0.05em;
+    white-space: nowrap; // a circle shouldn't break across lines
+    animation: mk-circle 520ms ease-out var(--d) both;
+  }
+
+  &--repeat {
+    cursor: default;
+
+    &.mk--skill {
+      opacity: 0.75;
+    }
+
+    &.mk--people {
+      background-image: repeating-linear-gradient(90deg, var(--pen) 0 4px, transparent 4px 7px);
+    }
+
+    &.mk--signal {
+      border-style: dashed;
+    }
+  }
+}
+
+@keyframes mk-sweep {
+  from {
+    background-size: 0% var(--mk-h, 72%);
+  }
+
+  to {
+    background-size: 100% var(--mk-h, 72%);
+  }
+}
+
+@keyframes mk-underline {
+  from {
+    background-size: 0% 2px;
+  }
+
+  to {
+    background-size: 100% 2px;
+  }
+}
+
+@keyframes mk-circle {
+  from {
+    border-color: transparent;
+    background-color: rgba(200, 67, 43, 0.18);
+  }
+
+  to {
+    border-color: var(--pen);
+    background-color: transparent;
+  }
+}
+
+@keyframes fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+// --- margin notes
+
+.note {
+  position: absolute;
+  left: 1.4rem;
+  right: 1.1rem;
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  gap: 0.6rem;
+  padding: 0.3rem 0.4rem 0.35rem 0.3rem;
+  border-radius: 0.3rem;
+  opacity: 0;
+  animation: note-in 420ms ease var(--d, 0ms) forwards;
+  transition:
+    background 140ms ease,
+    top 260ms cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  p {
+    font-family: var(--hand);
+    font-size: 1.28rem;
+    font-weight: 500;
+    line-height: 1.12;
+    color: var(--ink-2);
+  }
+
+  &.is-active {
+    background: var(--hl-soft);
+
+    .note__n {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: var(--paper-raised);
+    }
+  }
+
+  &--signal p {
+    color: var(--pen);
+  }
+
+  &--mine p {
+    color: var(--ink);
+  }
+}
+
+.note__n {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--ink-2);
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  transition:
+    background 140ms ease,
+    color 140ms ease;
+
+  .note--signal & {
+    border-color: var(--pen);
+    color: var(--pen);
+  }
+
+  .note--people & {
+    border-style: dashed;
+  }
+
+  .note--mine & {
+    border: 0;
+    font-size: 1rem;
+    color: var(--pen);
+  }
+}
+
+.note__kind {
+  display: block;
+  margin-bottom: 0.1rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.02em;
+  color: var(--faint);
+}
+
+@keyframes note-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// --- gap severity marks (report page)
+
+.mk--gap-high,
+.mk--gap-medium {
+  background-image: linear-gradient(
+    100deg,
+    transparent 0.1em,
+    var(--hl) 0.25em,
+    var(--hl) calc(100% - 0.25em),
+    transparent calc(100% - 0.05em)
+  );
+  background-repeat: no-repeat;
+  background-position: 0 65%;
+  animation: mk-sweep 520ms cubic-bezier(0.6, 0, 0.3, 1) var(--d) both;
+}
+
+.mk--gap-medium {
+  --mk-h: 40%;
+  background-position: 0 95%;
+}
+
+.mk--gap-low {
+  background-image: repeating-linear-gradient(90deg, var(--ink-2) 0 2px, transparent 2px 5px);
+  background-repeat: no-repeat;
+  background-position: 0 94%;
+  animation: mk-underline 480ms ease-out var(--d) both;
+}
+
+.swatch--gap-high {
+  background: var(--hl);
+}
+
+.swatch--gap-medium {
+  background: linear-gradient(var(--hl), var(--hl)) no-repeat 0 100% / 100% 45%;
+}
+
+.swatch--gap-low {
+  height: 0.15rem;
+  background: repeating-linear-gradient(90deg, var(--ink-2) 0 2px, transparent 2px 5px);
+}
+
+.note--gap-high .note__n {
+  background: var(--hl);
+  border-color: var(--ink);
+}
+
+.note--gap-low .note__n {
+  border-style: dashed;
+  border-color: var(--faint);
+  color: var(--muted);
+}
+
+// --- "reading" state while the report is being generated
+
+.sheet--scanning .sheet__body::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3.5rem;
+  background: linear-gradient(transparent, rgba(255, 226, 74, 0.32), transparent);
+  pointer-events: none;
+  animation: scan 2.6s ease-in-out infinite alternate;
+}
+
+@keyframes scan {
+  to {
+    top: calc(100% - 3.5rem);
+  }
+}
+
+@media (max-width: 899px) {
+  .sheet__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sheet__notes {
+    display: grid;
+    gap: 0.6rem;
+    padding: 1.25rem;
+    border-left: 0;
+    border-top: 3px double rgba(200, 67, 43, 0.45);
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  .note {
+    position: static;
+  }
+}
+
+@media (max-width: 520px) {
+  .sheet__legend {
+    display: none;
+  }
+}

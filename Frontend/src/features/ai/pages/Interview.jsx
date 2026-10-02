@@ -1,17 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { generateReport } from "../services/interview.api";
 import "../interview.scss";
 import Wordmark from "../../../components/Wordmark";
-
-const severityClass = (severity) => `severity severity--${severity}`;
-
-const scoreLabel = (score) => {
-  if (score >= 80) return "Strong match";
-  if (score >= 60) return "Good foundation";
-  if (score >= 40) return "Needs focus";
-  return "High improvement area";
-};
+import ReadingSheet from "../components/ReadingSheet";
+import ReportView from "../components/ReportView";
 
 const Interview = () => {
   const [resume, setResume] = useState(null);
@@ -21,6 +14,8 @@ const Interview = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [report, setReport] = useState(null);
+  const [submittedJD, setSubmittedJD] = useState("");
+  const outputRef = useRef(null);
 
   const inputStats = useMemo(() => {
     const jdWords = jobDescription.trim() ? jobDescription.trim().split(/\s+/).length : 0;
@@ -33,6 +28,13 @@ const Interview = () => {
     ];
   }, [resume, selfDescription, jobDescription]);
 
+  // Bring the reading state, then the finished report, into view.
+  useEffect(() => {
+    if (loading || report) {
+      outputRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [loading, report]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -42,6 +44,7 @@ const Interview = () => {
       return;
     }
 
+    setSubmittedJD(jobDescription.trim());
     setLoading(true);
     setReport(null);
     try {
@@ -133,7 +136,7 @@ const Interview = () => {
             {error && <p className="error">{error}</p>}
 
             <button className="button primary-button" disabled={loading}>
-              {loading ? "Writing your report…" : "Generate report"}
+              {loading ? "Writing your report…" : report ? "Generate a new report" : "Generate report"}
             </button>
           </form>
 
@@ -159,135 +162,24 @@ const Interview = () => {
                 <p>A real posting and a profile that names actual projects beats a polished paragraph.</p>
               </div>
             </div>
-            {loading && (
-              <div className="analysis-loader">
-                <span />
-                <div>
-                  <strong>Reading the role against your profile</strong>
-                  <p>Gemini is writing your questions and plan. Keep this tab open.</p>
-                </div>
-              </div>
-            )}
           </aside>
         </section>
 
-        {!report && !loading && (
-          <section className="empty-report">
-            <p className="eyebrow">Step 2</p>
-            <h2>Your report will appear here.</h2>
-            <p>
-              Questions with the intent behind them, where you're thin, and a five-day plan to fix it.
-            </p>
-          </section>
-        )}
+        <div className="lab-output" ref={outputRef}>
+          {loading && <ReadingSheet text={submittedJD} />}
 
-        {report && (
-          <section className="report-dashboard" id="report">
-            <div className="report-hero">
-              <div>
-                <p className="eyebrow">Your report</p>
-                <h2>{report.title || "Interview Report"}</h2>
-                <p>{scoreLabel(report.matchScore)} for this role, based on what you shared.</p>
-              </div>
-              <div className="score-orbit" style={{ "--score": `${report.matchScore || 0}%` }}>
-                <span>{report.matchScore}</span>
-                <small>match score</small>
-              </div>
-            </div>
-
-            <div className="report-metrics">
-              <div>
-                <span>Technical</span>
-                <strong>{report.technicalQuestions?.length || 0}</strong>
-              </div>
-              <div>
-                <span>Behavioral</span>
-                <strong>{report.behavioralQuestions?.length || 0}</strong>
-              </div>
-              <div>
-                <span>Skill gaps</span>
-                <strong>{report.skillGaps?.length || 0}</strong>
-              </div>
-              <div>
-                <span>Prep days</span>
-                <strong>{report.preparationPlan?.length || 0}</strong>
-              </div>
-            </div>
-
-            <div className="report-columns">
-              <section className="report-block report-block--wide">
-                <div className="section-title">
-                  <p className="eyebrow">Technical</p>
-                  <h3>Technical Questions</h3>
-                </div>
-                {report.technicalQuestions?.map((q, i) => (
-                  <article key={`tech-${i}`} className="qa-card">
-                    <span className="qa-index">{String(i + 1).padStart(2, "0")}</span>
-                    <div>
-                      <h4>{q.question}</h4>
-                      <p><strong>Why they ask:</strong> {q.intention}</p>
-                      <p><strong>How to answer:</strong> {q.answer}</p>
-                    </div>
-                  </article>
-                ))}
-              </section>
-
-              <section className="report-block">
-                <div className="section-title">
-                  <p className="eyebrow">Where you're thin</p>
-                  <h3>Skill Gaps</h3>
-                </div>
-                <ul className="skill-gaps">
-                  {report.skillGaps?.map((gap, i) => (
-                    <li key={`gap-${i}`}>
-                      <span>{gap.skill}</span>
-                      <span className={severityClass(gap.severity)}>{gap.severity}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            </div>
-
-            <section className="report-block">
-              <div className="section-title">
-                <p className="eyebrow">How you work</p>
-                <h3>Behavioral Questions</h3>
-              </div>
-              <div className="behavior-grid">
-                {report.behavioralQuestions?.map((q, i) => (
-                  <article key={`beh-${i}`} className="behavior-card">
-                    <span>Round {i + 1}</span>
-                    <h4>{q.question}</h4>
-                    <p><strong>Intent:</strong> {q.intention}</p>
-                    <p><strong>Answer:</strong> {q.answer}</p>
-                  </article>
-                ))}
-              </div>
+          {!report && !loading && (
+            <section className="empty-report">
+              <p className="eyebrow">Step 2</p>
+              <h2>Your report will appear here.</h2>
+              <p>
+                Questions with the intent behind them, where you're thin, and a five-day plan to fix it.
+              </p>
             </section>
+          )}
 
-            <section className="report-block" id="prep-plan">
-              <div className="section-title">
-                <p className="eyebrow">The plan</p>
-                <h3>Five-Day Plan</h3>
-              </div>
-              <div className="timeline">
-                {report.preparationPlan?.map((day, i) => (
-                  <article key={`day-${i}`} className="timeline-item">
-                    <span className="timeline-day">Day {day.day}</span>
-                    <div>
-                      <h4>{day.focus}</h4>
-                      <ul>
-                        {day.tasks?.map((task, j) => (
-                          <li key={`task-${i}-${j}`}>{task}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          </section>
-        )}
+          {report && !loading && <ReportView report={report} />}
+        </div>
       </section>
     </main>
   );
