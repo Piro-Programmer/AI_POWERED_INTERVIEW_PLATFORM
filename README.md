@@ -162,6 +162,50 @@ Frontend runs on:
 http://localhost:5173
 ```
 
+In development, Vite proxies `/api` requests to `http://localhost:3000` (see `Frontend/vite.config.js`), so the frontend and backend share one origin and the auth cookie just works.
+
+## Deployment
+
+The recommended setup is the **backend on Render** (a normal long-running Node server, so slow Gemini calls aren't cut off) and the **frontend on Vercel**. Vercel forwards `/api/*` to Render, so the browser only ever talks to your Vercel domain and the login cookie stays first-party.
+
+### 1. Backend on Render
+
+1. In MongoDB Atlas, open **Network Access** and allow `0.0.0.0/0` (Render has no fixed IP).
+2. On Render, create a **Web Service** from this repository:
+   - Root Directory: `Backend`
+   - Build Command: `npm install`
+   - Start Command: `npm start`
+   - Health Check Path: `/api/health`
+3. Add environment variables:
+
+   ```env
+   MONGO_URI=your_mongodb_connection_string
+   JWT_SECRET=a_long_random_string
+   GOOGLE_GENAI_API_KEY=your_google_genai_api_key
+   NODE_ENV=production
+   ```
+
+4. Deploy, then open `https://<your-service>.onrender.com/api/health`. It should return `{"status":"ok"}`.
+
+On Render's free plan the service sleeps when idle, so the first request after a quiet period can take up to a minute.
+
+### 2. Point the frontend at the backend
+
+In `Frontend/vercel.json`, replace `YOUR-BACKEND.onrender.com` with your Render URL, then commit and push.
+
+### 3. Frontend on Vercel
+
+1. Import the repository on Vercel.
+2. Set **Root Directory** to `Frontend`. Do not use the "Services" preset.
+3. The **Application Preset** should become **Vite** (build `npm run build`, output `dist`).
+4. Deploy. No environment variables are needed for this setup.
+
+`vercel.json` also sends every non-API route to `index.html`, so refreshing `/dashboard` or `/interview` works.
+
+### Calling the backend directly instead (optional)
+
+If you'd rather not proxy through Vercel, set `VITE_API_URL=https://<your-service>.onrender.com` on Vercel, and on Render set `CLIENT_URL=https://<your-app>.vercel.app` and `COOKIE_SAMESITE=none`. Some browsers block cross-site cookies, which is why the proxy setup is recommended.
+
 ## API Flow
 
 | Step | Action |
@@ -183,6 +227,12 @@ POST /api/auth/register
 POST /api/auth/login
 GET  /api/auth/logout
 GET  /api/auth/get-me
+```
+
+### Health
+
+```text
+GET  /api/health
 ```
 
 ### Interview Reports
