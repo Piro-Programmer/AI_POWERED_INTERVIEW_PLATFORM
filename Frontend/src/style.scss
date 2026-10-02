@@ -182,6 +182,33 @@ a {
   grid-template-columns: 16rem minmax(0, 1fr);
 }
 
+// Signed-in pages: keep sidebar and content together as one centered column
+// on very wide screens (or when zoomed out) instead of pinning them left.
+.workspace-page,
+.interview-lab {
+  width: 100%;
+  max-width: 96rem;
+  margin-inline: auto;
+}
+
+.workspace-main,
+.lab-main {
+  width: 100%;
+  margin-inline: auto;
+}
+
+@media (min-width: 96rem) {
+  .workspace-sidebar,
+  .lab-sidebar {
+    border-left: 1px solid var(--rule);
+  }
+
+  .workspace-page,
+  .interview-lab {
+    border-right: 1px solid var(--rule);
+  }
+}
+
 .workspace-sidebar,
 .lab-sidebar {
   min-height: 100vh;
