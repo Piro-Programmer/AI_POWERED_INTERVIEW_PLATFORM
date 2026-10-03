@@ -43,7 +43,7 @@ Every response is validated against a strict schema before it reaches the user, 
 - Match score that counts up inside a hand-drawn ring that closes only as far as the score
 - Skill gaps highlighted inside your own job description, each linked to the plan day that covers it
 - Questions fold away until opened, so you can answer out loud first
-- Five-day plan as a checklist with progress, remembered in the browser
+- Five-day plan as a checklist with progress, saved to your account so it follows you across devices
 - While the report generates, your job description is shown being read, with an elapsed timer
 
 **Report history**
@@ -275,6 +275,7 @@ GET  /api/auth/get-me
 POST /api/interview        # generate a report
 GET  /api/interview        # list your reports (summaries)
 GET  /api/interview/:id    # one report in full
+PATCH /api/interview/:id/progress   # save ticked plan tasks, body: { "completedTasks": ["0-1", "2-0"] }
 ```
 
 ### Health
