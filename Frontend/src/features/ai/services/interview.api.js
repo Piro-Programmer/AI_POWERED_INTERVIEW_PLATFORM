@@ -14,8 +14,14 @@ export async function generateReport({ resume, selfDescription, jobDescription }
   return response.data;
 }
 
-/** Fetch the logged-in user's past interview reports. */
+/** Fetch summaries of the logged-in user's past interview reports, newest first. */
 export async function getMyReports() {
   const response = await api.get("/api/interview");
+  return response.data;
+}
+
+/** Fetch one full report by id. */
+export async function getReport(id) {
+  const response = await api.get(`/api/interview/${encodeURIComponent(id)}`);
   return response.data;
 }
