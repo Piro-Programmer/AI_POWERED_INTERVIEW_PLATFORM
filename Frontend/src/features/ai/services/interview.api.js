@@ -20,6 +20,12 @@ export async function getMyReports() {
   return response.data;
 }
 
+/** Save the ticked plan tasks ("dayIndex-taskIndex" ids) for a report. */
+export async function saveProgress(id, completedTasks) {
+  const response = await api.patch(`/api/interview/${encodeURIComponent(id)}/progress`, { completedTasks });
+  return response.data;
+}
+
 /** Fetch one full report by id. */
 export async function getReport(id) {
   const response = await api.get(`/api/interview/${encodeURIComponent(id)}`);
