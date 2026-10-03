@@ -91,6 +91,11 @@ const interviewReportSchema = new mongoose.Schema({
   behavioralQuestions: [behavioralQuestions],
   skillGaps: [skillGapSchema],
   preparationPlan: [preparationPlanSchema],
+  // Ticked plan tasks as "dayIndex-taskIndex", e.g. "1-0" = first task of day 2
+  completedTasks: {
+    type: [String],
+    default: []
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref:"users"

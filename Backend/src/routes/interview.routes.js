@@ -39,4 +39,15 @@ interviewRouter.get(
   interviewController.getReportByIdController
 );
 
+/**
+ * @route PATCH /api/interview/:id/progress
+ * @description save which preparation-plan tasks are ticked
+ * @access private
+ */
+interviewRouter.patch(
+  "/:id/progress",
+  authMiddleware.authUser,
+  interviewController.updateProgressController
+);
+
 export default interviewRouter;

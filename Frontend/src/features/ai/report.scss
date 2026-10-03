@@ -378,6 +378,26 @@
   }
 }
 
+.plan-save {
+  margin-top: 0.4rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  text-align: right;
+  color: var(--muted);
+
+  &--saved {
+    color: var(--ok);
+  }
+
+  &--error {
+    color: var(--pen);
+
+    button {
+      color: var(--pen);
+    }
+  }
+}
+
 .plan-days {
   list-style: none;
   margin-top: 1.25rem;
