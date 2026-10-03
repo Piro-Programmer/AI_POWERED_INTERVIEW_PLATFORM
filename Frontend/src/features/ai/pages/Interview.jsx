@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { generateReport } from "../services/interview.api";
 import "../interview.scss";
 import Wordmark from "../../../components/Wordmark";
@@ -7,9 +7,11 @@ import ReadingSheet from "../components/ReadingSheet";
 import ReportView from "../components/ReportView";
 
 const Interview = () => {
+  const location = useLocation();
   const [resume, setResume] = useState(null);
   const [selfDescription, setSelfDescription] = useState("");
-  const [jobDescription, setJobDescription] = useState("");
+  // "Practise this role again" from the history page arrives with the posting filled in
+  const [jobDescription, setJobDescription] = useState(() => location.state?.jobDescription || "");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -68,6 +70,7 @@ const Interview = () => {
           <a href="#inputs" className="lab-nav__item lab-nav__item--active">Inputs</a>
           <a href="#report" className="lab-nav__item">Report</a>
           <a href="#prep-plan" className="lab-nav__item">Prep Plan</a>
+          <Link to="/reports" className="lab-nav__item">Your reports</Link>
         </nav>
         <div className="lab-sidebar__note">
           <strong>What you'll get</strong>

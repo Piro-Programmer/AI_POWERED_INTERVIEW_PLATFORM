@@ -28,4 +28,15 @@ interviewRouter.get(
   interviewController.getMyReportsController
 );
 
+/**
+ * @route GET /api/interview/:id
+ * @description get one of the logged-in user's reports in full
+ * @access private
+ */
+interviewRouter.get(
+  "/:id",
+  authMiddleware.authUser,
+  interviewController.getReportByIdController
+);
+
 export default interviewRouter;

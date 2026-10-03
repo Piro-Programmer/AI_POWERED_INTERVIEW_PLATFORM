@@ -1,28 +1,14 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../features/auth/hooks/useAuth";
-import Wordmark from "../components/Wordmark";
+import AppSidebar from "../components/AppSidebar";
 
 const Home = () => {
-  const { user, handleLogout } = useAuth();
+  const { user } = useAuth();
   const firstName = user?.username?.split(" ")[0];
 
   return (
     <main className="workspace-page">
-      <aside className="workspace-sidebar">
-        <Wordmark />
-        <nav className="side-nav" aria-label="Main navigation">
-          <Link className="side-nav__item side-nav__item--active" to="/dashboard">Your desk</Link>
-          <Link className="side-nav__item" to="/interview">New report</Link>
-        </nav>
-        <div className="sidebar-profile">
-          <span className="avatar">{user?.username?.slice(0, 1)?.toUpperCase() || "U"}</span>
-          <div>
-            <strong>{user?.username || "Candidate"}</strong>
-            <small>{user?.email}</small>
-          </div>
-        </div>
-        <button className="ghost-button" onClick={handleLogout}>Sign out</button>
-      </aside>
+      <AppSidebar />
 
       <section className="workspace-main">
         <header className="workspace-hero">
@@ -34,6 +20,7 @@ const Home = () => {
           </p>
           <div className="hero-actions">
             <Link className="button primary-button" to="/interview">Start a new report</Link>
+            <Link className="button secondary-button" to="/reports">Your reports</Link>
           </div>
         </header>
 
@@ -56,9 +43,12 @@ const Home = () => {
         </section>
 
         <section className="proof-panel">
-          <p className="eyebrow">Coming soon</p>
-          <h3>Your past reports, in one place.</h3>
-          <p>Every report you generate is already saved to your account. A list of them is next on the build list.</p>
+          <p className="eyebrow">Your reports</p>
+          <h3>Every job you’ve prepped for, in one place.</h3>
+          <p>
+            Come back to any report, pick up the plan where you left off, or practise the same role again.{" "}
+            <Link className="text-link" to="/reports">Open your reports →</Link>
+          </p>
         </section>
       </section>
     </main>

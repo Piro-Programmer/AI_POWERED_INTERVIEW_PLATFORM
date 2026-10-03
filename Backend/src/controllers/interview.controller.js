@@ -1,6 +1,7 @@
 // Import from the lib path directly: importing the package root runs pdf-parse's
 // debug harness (it tries to read a bundled test PDF) and crashes under ESM.
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
+import mongoose from "mongoose";
 import generateInterviewReport from "../services/ai.service.js";
 import interviewReportModel from "../models/interviewReport.model.js";
 
@@ -76,16 +77,34 @@ async function generateInterviewReportController(req, res) {
   }
 }
 
+// The list only needs enough to draw a row, not every question and answer.
+function toReportSummary(report) {
+  return {
+    _id: report._id,
+    title: report.title,
+    createdAt: report.createdAt,
+    matchScore: report.matchScore,
+    jobDescription: report.jobDescription,
+    skillGaps: report.skillGaps || [],
+    technicalCount: report.technicalQuestions?.length || 0,
+    behavioralCount: report.behavioralQuestions?.length || 0,
+    planDays: report.preparationPlan?.length || 0,
+    planTaskCount: (report.preparationPlan || []).reduce((sum, day) => sum + (day.tasks?.length || 0), 0)
+  };
+}
+
 /**
  * @name getMyReportsController
- * @description List the logged-in user's interview reports (newest first).
+ * @description List the logged-in user's interview reports (newest first) as summaries.
  * @access private
  */
 async function getMyReportsController(req, res) {
   try {
-    const reports = await interviewReportModel
+    const reports = (await interviewReportModel
       .find({ user: req.user.id })
-      .sort({ createdAt: -1 });
+      .select("-resume -selfDescription")
+      .sort({ createdAt: -1 })
+      .lean()).map(toReportSummary);
 
     return res.status(200).json({
       message: "Interview reports fetched successfully",
@@ -100,7 +119,43 @@ async function getMyReportsController(req, res) {
   }
 }
 
+/**
+ * @name getReportByIdController
+ * @description Fetch one of the logged-in user's reports in full.
+ * @access private
+ */
+async function getReportByIdController(req, res) {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(404).json({ message: "Report not found" });
+    }
+
+    const interviewReport = await interviewReportModel
+      .findOne({ _id: id, user: req.user.id })
+      .select("-resume")
+      .lean();
+
+    if (!interviewReport) {
+      return res.status(404).json({ message: "Report not found" });
+    }
+
+    return res.status(200).json({
+      message: "Interview report fetched successfully",
+      interviewReport
+    });
+  } catch (err) {
+    console.error("getReportById failed:", err.message);
+    return res.status(500).json({
+      message: "Failed to fetch interview report",
+      error: err.message
+    });
+  }
+}
+
 export default {
   generateInterviewReportController,
-  getMyReportsController
+  getMyReportsController,
+  getReportByIdController
 };
