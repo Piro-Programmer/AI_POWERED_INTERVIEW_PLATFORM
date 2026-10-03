@@ -46,6 +46,11 @@ Every response is validated against a strict schema before it reaches the user, 
 - Five-day plan as a checklist with progress, remembered in the browser
 - While the report generates, your job description is shown being read, with an elapsed timer
 
+**Report history**
+- Every saved report in one ledger: match score, date, top gaps and plan progress
+- Search, sort by date or score, and filter by plan progress
+- Open any report again, or practise the same role with the job description pre-filled
+
 **Platform**
 - Registration, login, logout and protected routes
 - JWT authentication in an HTTP-only cookie
@@ -267,8 +272,9 @@ GET  /api/auth/get-me
 ### Interview Reports
 
 ```text
-POST /api/interview
-GET  /api/interview
+POST /api/interview        # generate a report
+GET  /api/interview        # list your reports (summaries)
+GET  /api/interview/:id    # one report in full
 ```
 
 ### Health
@@ -279,7 +285,6 @@ GET  /api/health
 
 ## Future Improvements
 
-- Report history page in the frontend
 - Practice mode: flashcards with a timer and re-drilling weak answers
 - AI-based answer evaluation
 - Voice-based interview practice
