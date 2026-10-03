@@ -89,7 +89,9 @@ function toReportSummary(report) {
     technicalCount: report.technicalQuestions?.length || 0,
     behavioralCount: report.behavioralQuestions?.length || 0,
     planDays: report.preparationPlan?.length || 0,
-    planTaskCount: (report.preparationPlan || []).reduce((sum, day) => sum + (day.tasks?.length || 0), 0)
+    planTaskCount: (report.preparationPlan || []).reduce((sum, day) => sum + (day.tasks?.length || 0), 0),
+    // null = report predates saved progress (ticks may still be only in the browser)
+    completedCount: Array.isArray(report.completedTasks) ? report.completedTasks.length : null
   };
 }
 
@@ -154,8 +156,69 @@ async function getReportByIdController(req, res) {
   }
 }
 
+const TASK_ID = /^\d{1,3}-\d{1,3}$/;
+
+/**
+ * @name updateProgressController
+ * @description Save which preparation-plan tasks the user has ticked.
+ *              Expects { completedTasks: ["0-0", "1-2", ...] } (dayIndex-taskIndex).
+ * @access private
+ */
+async function updateProgressController(req, res) {
+  try {
+    const { id } = req.params;
+    const { completedTasks } = req.body || {};
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(404).json({ message: "Report not found" });
+    }
+
+    if (
+      !Array.isArray(completedTasks) ||
+      completedTasks.length > 500 ||
+      !completedTasks.every((task) => typeof task === "string" && TASK_ID.test(task))
+    ) {
+      return res.status(400).json({
+        message: 'completedTasks must be a list of task ids like "0-1"'
+      });
+    }
+
+    const report = await interviewReportModel
+      .findOne({ _id: id, user: req.user.id })
+      .select("preparationPlan")
+      .lean();
+
+    if (!report) {
+      return res.status(404).json({ message: "Report not found" });
+    }
+
+    // Keep only ids that point at a real task in this report's plan
+    const valid = [...new Set(completedTasks)].filter((task) => {
+      const [day, index] = task.split("-").map(Number);
+      return index < (report.preparationPlan?.[day]?.tasks?.length || 0);
+    });
+
+    await interviewReportModel.updateOne(
+      { _id: id, user: req.user.id },
+      { $set: { completedTasks: valid } }
+    );
+
+    return res.status(200).json({
+      message: "Progress saved",
+      completedTasks: valid
+    });
+  } catch (err) {
+    console.error("updateProgress failed:", err.message);
+    return res.status(500).json({
+      message: "Failed to save progress",
+      error: err.message
+    });
+  }
+}
+
 export default {
   generateInterviewReportController,
   getMyReportsController,
-  getReportByIdController
+  getReportByIdController,
+  updateProgressController
 };

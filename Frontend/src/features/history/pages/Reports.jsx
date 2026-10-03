@@ -75,7 +75,8 @@ const Reports = () => {
         if (cancelled) return;
         setReports(
           (data.reports || []).map((r) => {
-            const done = Math.min(planDone(r._id), r.planTaskCount || 0);
+            // Account progress when the report has it; older reports fall back to this browser
+            const done = Math.min(r.completedCount ?? planDone(r._id), r.planTaskCount || 0);
             return { ...r, done, status: planStatus(done, r.planTaskCount || 0) };
           })
         );

@@ -154,7 +154,7 @@ const ReportView = ({ report }) => {
           <p className="eyebrow">04 · The plan</p>
           <h3>{plan.length} evenings, one focus each.</h3>
         </div>
-        <PrepPlan plan={plan} storageKey={report._id ? `plan:${report._id}` : null} />
+        <PrepPlan plan={plan} reportId={report._id} savedTasks={report.completedTasks} />
       </section>
     </section>
   );
