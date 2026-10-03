@@ -5,6 +5,8 @@ import Interview from "./features/ai/pages/Interview";
 import Protected from "./features/auth/components/Protected";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
+import Reports from "./features/history/pages/Reports";
+import ReportDetail from "./features/history/pages/ReportDetail";
 
 export const router = createBrowserRouter([
   {
@@ -18,6 +20,14 @@ export const router = createBrowserRouter([
   {
     path: "/interview",
     element: <Protected><Interview /></Protected>
+  },
+  {
+    path: "/reports",
+    element: <Protected><Reports /></Protected>
+  },
+  {
+    path: "/reports/:id",
+    element: <Protected><ReportDetail /></Protected>
   },
   {
     path: "/login",
