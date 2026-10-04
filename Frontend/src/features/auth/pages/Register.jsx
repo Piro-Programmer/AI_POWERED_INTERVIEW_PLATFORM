@@ -9,13 +9,19 @@ const Register = () => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const { loading, handleRegister } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await handleRegister({ username, email, password });
-    navigate("/dashboard");
+    setError("");
+    const result = await handleRegister({ username, email, password });
+    if (result.ok) {
+      navigate("/dashboard");
+    } else {
+      setError(result.message);
+    }
   };
 
   if (loading) {
@@ -47,6 +53,7 @@ const Register = () => {
           <div className="input-group">
             <label htmlFor="username">Username</label>
             <input
+              value={username}
               onChange={(e) => setUsername(e.target.value)}
               type="text"
               id="username"
@@ -60,6 +67,7 @@ const Register = () => {
           <div className="input-group">
             <label htmlFor="email">Email</label>
             <input
+              value={email}
               onChange={(e) => setEmail(e.target.value)}
               type="email"
               id="email"
@@ -72,6 +80,7 @@ const Register = () => {
           <div className="input-group">
             <label htmlFor="password">Password</label>
             <input
+              value={password}
               onChange={(e) => setPassword(e.target.value)}
               type="password"
               id="password"
@@ -80,6 +89,8 @@ const Register = () => {
               required
             />
           </div>
+
+          {error && <p className="auth-error" role="alert">{error}</p>}
 
           <button className="button primary-button">Create account</button>
         </form>

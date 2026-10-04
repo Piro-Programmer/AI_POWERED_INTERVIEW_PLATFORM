@@ -8,6 +8,9 @@ export const useAuth = () =>{
   const {user,setUser, loading, setLoading} = context
 
 
+  // Both return { ok: true } or { ok: false, message } so the page can show why
+  const errorMessage = (err, fallback) => err?.response?.data?.message || fallback
+
   const handleLogin = async ({email, password }) =>{
     setLoading(true)
 
@@ -16,14 +19,14 @@ export const useAuth = () =>{
 
       if(data && data.user){
         setUser(data.user)
-        return true;
+        return { ok: true };
       }else{
         console.log("Login failed: No user data is response")
-        return false;
+        return { ok: false, message: "Sign in failed. Please try again." };
       }
     }catch(err){
         console.log(err)
-        return false;
+        return { ok: false, message: errorMessage(err, "Couldn't reach the server. Please try again.") };
     }finally{
           setLoading(false)
 
@@ -40,10 +43,13 @@ export const useAuth = () =>{
 
       if (data && data.user) {
         setUser(data.user);
+        return { ok: true };
       }
+      return { ok: false, message: "Sign up failed. Please try again." };
 
     }catch(err){
       console.log("Register Error",err)
+      return { ok: false, message: errorMessage(err, "Couldn't reach the server. Please try again.") };
     }finally{
       setLoading(false)
     }
