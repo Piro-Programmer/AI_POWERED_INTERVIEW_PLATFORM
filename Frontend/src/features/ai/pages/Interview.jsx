@@ -1,10 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { generateReport } from "../services/interview.api";
+import { generateReport, getUsage } from "../services/interview.api";
 import "../interview.scss";
 import Wordmark from "../../../components/Wordmark";
 import ReadingSheet from "../components/ReadingSheet";
 import ReportView from "../components/ReportView";
+
+// Match the backend's input caps
+const MAX_JOB_DESCRIPTION = 15000;
+const MAX_SELF_DESCRIPTION = 5000;
+
+const resetTime = (iso) =>
+  new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
 const Interview = () => {
   const location = useLocation();
@@ -17,6 +24,7 @@ const Interview = () => {
   const [error, setError] = useState("");
   const [report, setReport] = useState(null);
   const [submittedJD, setSubmittedJD] = useState("");
+  const [usage, setUsage] = useState(null);
   const outputRef = useRef(null);
 
   const inputStats = useMemo(() => {
@@ -29,6 +37,21 @@ const Interview = () => {
       { label: "JD words", value: jdWords }
     ];
   }, [resume, selfDescription, jobDescription]);
+
+  // Today's AI allowance; if this fails the page just doesn't show the count.
+  useEffect(() => {
+    let cancelled = false;
+    getUsage()
+      .then((data) => {
+        if (!cancelled) setUsage(data.usage);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const outOfReports = usage?.remaining === 0;
 
   // Bring the reading state, then the finished report, into view.
   useEffect(() => {
@@ -52,11 +75,15 @@ const Interview = () => {
     try {
       const data = await generateReport({ resume, selfDescription, jobDescription });
       setReport(data.interviewReport);
+      if (data.usage) setUsage(data.usage);
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        "Failed to generate report. Please try again."
-      );
+      const data = err.response?.data;
+      if (data?.code === "DAILY_LIMIT" && data.usage) {
+        setUsage(data.usage);
+        setError(`${data.message} Your allowance resets at ${resetTime(data.usage.resetsAt)}.`);
+      } else {
+        setError(data?.message || "Failed to generate report. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -121,6 +148,7 @@ const Interview = () => {
                 rows={4}
                 placeholder="A few lines: what you've built, your stack, and the role you want next."
                 value={selfDescription}
+                maxLength={MAX_SELF_DESCRIPTION}
                 onChange={(e) => setSelfDescription(e.target.value)}
               />
             </div>
@@ -132,15 +160,27 @@ const Interview = () => {
                 rows={8}
                 placeholder="Paste the whole posting, including the nice-to-haves."
                 value={jobDescription}
+                maxLength={MAX_JOB_DESCRIPTION}
                 onChange={(e) => setJobDescription(e.target.value)}
               />
             </div>
 
             {error && <p className="error">{error}</p>}
 
-            <button className="button primary-button" disabled={loading}>
-              {loading ? "Writing your report…" : report ? "Generate a new report" : "Generate report"}
+            <button className="button primary-button" disabled={loading || outOfReports}>
+              {loading
+                ? "Writing your report…"
+                : outOfReports
+                  ? "Daily limit reached"
+                  : report
+                    ? "Generate a new report"
+                    : "Generate report"}
             </button>
+            {outOfReports && !error && (
+              <p className="limit-note">
+                You’ve used today’s {usage.limit} reports. Your allowance resets at {resetTime(usage.resetsAt)}.
+              </p>
+            )}
           </form>
 
           <aside className="readiness-panel">
@@ -157,6 +197,12 @@ const Interview = () => {
                   <strong>{item.value}</strong>
                 </div>
               ))}
+              {usage && (
+                <div className={outOfReports ? "setup-metrics__quota is-empty" : "setup-metrics__quota"}>
+                  <span>Reports left today</span>
+                  <strong>{usage.remaining} of {usage.limit}</strong>
+                </div>
+              )}
             </div>
             <div className="signal-card">
               <span className="signal-card__bar" />

@@ -10,12 +10,16 @@ const Login = () => {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const success = await handleLogin({ email, password });
-    if (success) {
+    setError("");
+    const result = await handleLogin({ email, password });
+    if (result.ok) {
       navigate("/dashboard");
+    } else {
+      setError(result.message);
     }
   };
 
@@ -48,6 +52,7 @@ const Login = () => {
           <div className="input-group">
             <label htmlFor="email">Email</label>
             <input
+              value={email}
               onChange={(e) => setEmail(e.target.value)}
               type="email"
               id="email"
@@ -60,6 +65,7 @@ const Login = () => {
           <div className="input-group">
             <label htmlFor="password">Password</label>
             <input
+              value={password}
               onChange={(e) => setPassword(e.target.value)}
               type="password"
               id="password"
@@ -68,6 +74,8 @@ const Login = () => {
               required
             />
           </div>
+
+          {error && <p className="auth-error" role="alert">{error}</p>}
 
           <button className="button primary-button">Sign in</button>
         </form>
