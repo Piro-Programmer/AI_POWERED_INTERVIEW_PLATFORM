@@ -4,6 +4,7 @@ import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import mongoose from "mongoose";
 import generateInterviewReport from "../services/ai.service.js";
 import interviewReportModel from "../models/interviewReport.model.js";
+import { getUsage, refundGeneration, reserveGeneration } from "../services/aiQuota.service.js";
 
 function createReportTitle(jobDescription) {
   const normalizedDescription = jobDescription
@@ -27,26 +28,66 @@ function createReportTitle(jobDescription) {
     : "Interview Report";
 }
 
+// Input caps keep a single request from sending a huge prompt to the AI.
+const MAX_JOB_DESCRIPTION = 15000;
+const MAX_SELF_DESCRIPTION = 5000;
+const MAX_RESUME_TEXT = 20000;
+
+// Users with a generation in progress. One at a time per user, so parallel
+// requests can't race the daily allowance or double the AI cost.
+const generating = new Set();
+
 /**
  * @name generateInterviewReportController
  * @description Parse the uploaded resume PDF, generate a structured interview
  *              report via the AI service, persist it, and return it.
+ *              Each successful generation uses one of the user's daily allowance.
  * @access private
  */
 async function generateInterviewReportController(req, res) {
-  try {
-    const { selfDescription, jobDescription } = req.body;
+  const userId = req.user.id;
+  const jobDescription = typeof req.body?.jobDescription === "string" ? req.body.jobDescription.trim() : "";
+  const selfDescription = typeof req.body?.selfDescription === "string" ? req.body.selfDescription.trim() : "";
 
-    if (!jobDescription) {
-      return res.status(400).json({
-        message: "Job description is required"
+  if (!jobDescription) {
+    return res.status(400).json({ message: "Job description is required" });
+  }
+  if (jobDescription.length > MAX_JOB_DESCRIPTION) {
+    return res.status(400).json({
+      message: `Job description is too long (max ${MAX_JOB_DESCRIPTION.toLocaleString("en-US")} characters).`
+    });
+  }
+  if (selfDescription.length > MAX_SELF_DESCRIPTION) {
+    return res.status(400).json({
+      message: `Profile is too long (max ${MAX_SELF_DESCRIPTION.toLocaleString("en-US")} characters).`
+    });
+  }
+
+  if (generating.has(userId)) {
+    return res.status(429).json({
+      message: "A report is already being generated for your account. Wait for it to finish."
+    });
+  }
+
+  generating.add(userId);
+  let reservation = null;
+
+  try {
+    reservation = await reserveGeneration(userId);
+
+    if (!reservation) {
+      const usage = await getUsage(userId);
+      return res.status(429).json({
+        code: "DAILY_LIMIT",
+        message: `You've used all ${usage.limit} reports for today.`,
+        usage
       });
     }
 
     let resumeText = "";
     if (req.file?.buffer) {
       const data = await pdfParse(req.file.buffer);
-      resumeText = data.text;
+      resumeText = data.text.slice(0, MAX_RESUME_TEXT);
     }
 
     const reportByAi = await generateInterviewReport({
@@ -56,7 +97,7 @@ async function generateInterviewReportController(req, res) {
     });
 
     const interviewReport = await interviewReportModel.create({
-      user: req.user.id,
+      user: userId,
       title: createReportTitle(jobDescription),
       resume: resumeText,
       selfDescription,
@@ -66,14 +107,38 @@ async function generateInterviewReportController(req, res) {
 
     return res.status(201).json({
       message: "Interview report generated successfully",
-      interviewReport
+      interviewReport,
+      usage: reservation.usage
     });
   } catch (err) {
+    // A failed generation shouldn't cost the user a report
+    if (reservation) {
+      await refundGeneration(userId, reservation.day).catch((refundErr) =>
+        console.error("refundGeneration failed:", refundErr.message)
+      );
+    }
     console.error("generateInterviewReport failed:", err.message);
     return res.status(500).json({
       message: "Failed to generate interview report",
       error: err.message
     });
+  } finally {
+    generating.delete(userId);
+  }
+}
+
+/**
+ * @name getUsageController
+ * @description How many AI reports the user has left today.
+ * @access private
+ */
+async function getUsageController(req, res) {
+  try {
+    const usage = await getUsage(req.user.id);
+    return res.status(200).json({ usage });
+  } catch (err) {
+    console.error("getUsage failed:", err.message);
+    return res.status(500).json({ message: "Failed to fetch usage", error: err.message });
   }
 }
 
@@ -218,6 +283,7 @@ async function updateProgressController(req, res) {
 
 export default {
   generateInterviewReportController,
+  getUsageController,
   getMyReportsController,
   getReportByIdController,
   updateProgressController

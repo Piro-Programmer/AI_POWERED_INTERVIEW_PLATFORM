@@ -167,6 +167,29 @@
     font-family: var(--mono);
     font-weight: 500;
   }
+
+  // today's AI allowance: highlighted, red pen once it's used up
+  .setup-metrics__quota {
+    border-bottom-style: solid;
+    border-bottom-color: var(--ink);
+
+    strong {
+      padding: 0 0.3em;
+      background: var(--hl);
+    }
+
+    &.is-empty strong {
+      color: var(--pen);
+      background: var(--pen-soft);
+    }
+  }
+}
+
+.limit-note {
+  font-family: var(--hand);
+  font-size: 1.3rem;
+  line-height: 1.15;
+  color: var(--pen);
 }
 
 .signal-card {

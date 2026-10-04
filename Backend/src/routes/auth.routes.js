@@ -1,22 +1,23 @@
 import { Router } from "express";
 import authController from "../controllers/auth.controllers.js";
 import authMiddleware from "../middlewares/auth.middleware.js";
+import { loginAccountLimiter, loginIpLimiter, registerLimiter } from "../middlewares/rateLimit.middleware.js";
 
 const authRouter = Router();
 
 /**
  * @route POST /api/auth/register
  * @description Register a new user
- * @access Public
+ * @access Public (rate limited per IP)
  */
-authRouter.post("/register", authController.registerUserController);
+authRouter.post("/register", registerLimiter, authController.registerUserController);
 
 /**
  * @route POST /api/auth/login
  * @description login user with email and password
- * @access Public
+ * @access Public (failed attempts rate limited per IP and per account)
  */
-authRouter.post("/login", authController.loginUserController);
+authRouter.post("/login", loginIpLimiter, loginAccountLimiter, authController.loginUserController);
 
 /**
  * @route GET /api/auth/logout

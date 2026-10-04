@@ -23,9 +23,12 @@ const cookieOptions = {
  */
 
 async function registerUserController(req, res) {
-  const { username, email, password } = req.body;
+  const { username, email, password } = req.body || {};
 
-  if (!username || !email || !password) {
+  // Strings only: an object like { "$gt": "" } must never reach a Mongo query
+  if (
+    [username, email, password].some((value) => typeof value !== "string" || !value.trim())
+  ) {
     return res.status(400).json({
       message: "Please provide username, email and password"
     });
@@ -76,7 +79,15 @@ async function registerUserController(req, res) {
  * @access Public
  */
 async function loginUserController(req, res) {
-  const { email, password } = req.body;
+  const { email, password } = req.body || {};
+
+  // Without this, findOne({ email: undefined }) matches the first user and
+  // bcrypt then throws on the missing password
+  if (typeof email !== "string" || typeof password !== "string" || !email || !password) {
+    return res.status(400).json({
+      message: "Please provide email and password"
+    });
+  }
 
   const user = await userModel.findOne({ email });
   if (!user) {

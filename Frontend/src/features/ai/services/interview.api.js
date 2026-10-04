@@ -20,6 +20,12 @@ export async function getMyReports() {
   return response.data;
 }
 
+/** Today's AI report allowance: { limit, used, remaining, resetsAt }. */
+export async function getUsage() {
+  const response = await api.get("/api/interview/usage");
+  return response.data;
+}
+
 /** Save the ticked plan tasks ("dayIndex-taskIndex" ids) for a report. */
 export async function saveProgress(id, completedTasks) {
   const response = await api.patch(`/api/interview/${encodeURIComponent(id)}/progress`, { completedTasks });

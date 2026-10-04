@@ -60,6 +60,14 @@ Every response is validated against a strict schema before it reaches the user, 
 - React + Vite frontend, Express REST API backend
 - Deployed with the frontend on Vercel and the backend on Render
 
+**Limits and security**
+- Daily AI allowance per user (10 reports a day by default), shown on the new report page as "Reports left today"
+- The allowance is reserved atomically in MongoDB, so parallel requests can't overshoot it, and a failed AI call gives it back
+- One report generation at a time per user, plus a short burst limit
+- Failed sign-ins are rate limited per account and per network; sign-ups per network
+- Input caps (job description, profile, resume text, request size) and PDF-only uploads up to 3 MB
+- Security headers via Helmet, and every error returned as JSON the UI can show
+
 ## How It Works
 
 1. User registers or logs in.
@@ -274,6 +282,7 @@ GET  /api/auth/get-me
 ```text
 POST /api/interview        # generate a report
 GET  /api/interview        # list your reports (summaries)
+GET  /api/interview/usage  # reports left today: { limit, used, remaining, resetsAt }
 GET  /api/interview/:id    # one report in full
 PATCH /api/interview/:id/progress   # save ticked plan tasks, body: { "completedTasks": ["0-1", "2-0"] }
 ```
@@ -303,6 +312,7 @@ I built Interview Lab, an AI-powered interview preparation platform using the ME
 - File upload and PDF parsing
 - LLM integration with schema-validated, retried structured output
 - REST API design
-- MongoDB data persistence
+- MongoDB data persistence, including an atomic per-user daily quota
+- Production hardening: rate limiting, input limits, security headers
 - Production deployment across Vercel and Render with a same-origin API proxy
 - A distinctive, interactive UI built without a component library
