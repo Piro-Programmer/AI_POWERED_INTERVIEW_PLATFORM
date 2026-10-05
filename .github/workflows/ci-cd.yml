@@ -1,0 +1,201 @@
+name: CI/CD
+
+# PRs: test what changed.
+# main: test what changed, then deploy it: backend (Render) first, then
+# frontend (Vercel), each verified live before the pipeline goes green.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch: # "Run workflow" button: re-test and redeploy everything
+
+permissions:
+  contents: read
+  pull-requests: read # lets the change filter read PR files
+
+# A newer push to a PR cancels its older run; runs on main never cancel
+# each other, so a deploy is never cut off halfway.
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  API_URL: https://ai-powered-interview-platform-op4b.onrender.com
+  SITE_URL: https://ai-powered-interview-platform-hywork.vercel.app
+
+jobs:
+  changes:
+    name: detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.backend == 'true' }}
+      frontend: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.frontend == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name != 'workflow_dispatch' # manual runs do everything
+        with:
+          filters: |
+            backend:
+              - 'Backend/**'
+              - '.github/workflows/**'
+            frontend:
+              - 'Frontend/**'
+              - '.github/workflows/**'
+
+  backend:
+    name: backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: Backend
+    env:
+      # keep the in-memory MongoDB binary outside node_modules so it can be cached
+      MONGOMS_DOWNLOAD_DIR: ${{ github.workspace }}/.cache/mongodb-binaries
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Backend/package-lock.json
+      - name: Cache MongoDB binary
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.cache/mongodb-binaries
+          key: mongodb-binary-${{ runner.os }}-${{ hashFiles('Backend/package-lock.json') }}
+      - run: npm ci
+      - run: npm test
+
+  frontend:
+    name: frontend
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: Frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  deploy-backend:
+    name: deploy backend (Render)
+    needs: [changes, backend, frontend]
+    # main only, the backend changed, and nothing upstream failed
+    # (a skipped frontend job counts as fine)
+    if: >-
+      !cancelled() && !failure() &&
+      github.event_name != 'pull_request' && github.ref == 'refs/heads/main' &&
+      needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production-api
+      url: ${{ env.API_URL }}/api/health
+    concurrency:
+      group: deploy-backend
+      cancel-in-progress: false
+    steps:
+      - name: Deploy this exact commit to Render
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::Repository secret RENDER_DEPLOY_HOOK_URL is not set (see README > Deployment)."
+            exit 1
+          fi
+          curl -fsS -X POST "${HOOK}&ref=${GITHUB_SHA}" -o /dev/null
+          echo "Render deploy triggered for ${GITHUB_SHA}"
+
+      - name: Wait until Render runs this commit
+        run: |
+          # free instances may need to wake up; allow up to ~15 minutes
+          for i in $(seq 1 60); do
+            live=$(curl -fsS --max-time 30 "${API_URL}/api/health?check=${i}" | jq -r '.commit // empty' || true)
+            echo "check ${i}: running ${live:-unknown}"
+            if [ "$live" = "$GITHUB_SHA" ]; then
+              echo "### Backend live :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
+              echo "Render is running \`${GITHUB_SHA::7}\` — ${API_URL}/api/health" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::Render did not report commit ${GITHUB_SHA} within 15 minutes. Check the deploy log on Render."
+          exit 1
+
+  deploy-frontend:
+    name: deploy frontend (Vercel)
+    # after the backend, so the new UI never talks to an older API
+    needs: [changes, backend, frontend, deploy-backend]
+    if: >-
+      !cancelled() && !failure() &&
+      github.event_name != 'pull_request' && github.ref == 'refs/heads/main' &&
+      needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: ${{ env.SITE_URL }}
+    concurrency:
+      group: deploy-frontend
+      cancel-in-progress: false
+    steps:
+      - name: Deploy main to Vercel
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::Repository secret VERCEL_DEPLOY_HOOK_URL is not set (see README > Deployment)."
+            exit 1
+          fi
+          curl -fsS -X POST "$HOOK" -o /dev/null
+          echo "Vercel deploy triggered"
+
+      - name: Wait until Vercel serves this commit
+        run: |
+          for i in $(seq 1 40); do
+            live=$(curl -fsS --max-time 30 "${SITE_URL}/?check=${i}" \
+              | grep -o 'name="app-version" content="[^"]*"' | sed 's/.*content="//; s/"$//' || true)
+            echo "check ${i}: serving ${live:-unknown}"
+            if [ "$live" = "$GITHUB_SHA" ]; then
+              exit 0
+            fi
+            if [ "$live" = "dev" ]; then
+              echo "::warning::Vercel build has no commit SHA. Enable 'Automatically expose System Environment Variables' in the Vercel project to verify the exact commit."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::Vercel did not serve commit ${GITHUB_SHA} within 10 minutes. Check the deployment on Vercel."
+          exit 1
+
+      - name: Smoke test the live site
+        run: |
+          curl -fsS --max-time 30 "${SITE_URL}/" | grep -q '<title>' \
+            || { echo "::error::Live site did not return the app page"; exit 1; }
+          status=$(curl -fsS --max-time 60 "${SITE_URL}/api/health" | jq -r '.status' || true)
+          [ "$status" = "ok" ] \
+            || { echo "::error::${SITE_URL}/api/health did not return ok (Vercel -> Render proxy)"; exit 1; }
+          # a deep link must serve the app, not a 404
+          curl -fsS --max-time 30 -o /dev/null "${SITE_URL}/reports" \
+            || { echo "::error::Client-side route /reports did not load"; exit 1; }
+          {
+            echo "### Frontend live :white_check_mark:"
+            echo "Vercel is serving \`${GITHUB_SHA::7}\` — ${SITE_URL}"
+            echo "Smoke tests passed: page, /api proxy to Render, client-side routing."
+          } >> "$GITHUB_STEP_SUMMARY"

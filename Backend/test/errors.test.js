@@ -5,10 +5,17 @@ vi.mock("../src/services/ai.service.js", () => ({ default: vi.fn(), evaluateAnsw
 const { default: app } = await import("../src/app.js");
 
 describe("app-wide behaviour", () => {
-  it("health check answers ok", async () => {
+  it("health check answers ok and reports the running commit", async () => {
     const res = await request(app).get("/api/health");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: "ok" });
+    expect(res.body).toEqual({ status: "ok", commit: null });
+
+    process.env.RENDER_GIT_COMMIT = "abc123";
+    try {
+      expect((await request(app).get("/api/health")).body.commit).toBe("abc123");
+    } finally {
+      delete process.env.RENDER_GIT_COMMIT;
+    }
   });
 
   it("unknown API routes get a JSON 404", async () => {
