@@ -1,6 +1,6 @@
 // Client-side "markup" of a job description for the landing page demo.
 // This is intentionally simple keyword matching: it runs instantly, needs no
-// account, and costs nothing. The real report (Gemini + resume) reads context.
+// account, and costs nothing. The real report (AI + resume) reads context.
 //
 // kind:
 //   skill  -> highlighted, note is a likely technical question
