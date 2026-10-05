@@ -213,7 +213,7 @@ const Landing = () => {
 
       <footer className="footer">
         <Wordmark />
-        <p>Built with React, Express, MongoDB and Gemini.</p>
+        <p>Built with React, Express, MongoDB and Groq.</p>
         <a className="text-link" href={REPO_URL} target="_blank" rel="noreferrer">Source on GitHub</a>
       </footer>
     </div>

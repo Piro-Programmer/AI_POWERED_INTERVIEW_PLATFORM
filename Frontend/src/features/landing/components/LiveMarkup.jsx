@@ -94,7 +94,7 @@ const LiveMarkup = ({ ctaTo }) => {
 
       <p className="live__fineprint">
         This preview is simple keyword matching, so it’s instant and runs entirely in your browser. Select any
-        phrase on the page to add your own mark. The full report reads your resume against the role with Gemini.
+        phrase on the page to add your own mark. The full report uses AI to read your resume against the role.
       </p>
     </div>
   );
