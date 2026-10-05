@@ -1,5 +1,7 @@
 # Interview Lab: AI-Powered Interview Preparation (MERN + Groq)
 
+[![CI](https://github.com/Piro-Programmer/AI_POWERED_INTERVIEW_PLATFORM/actions/workflows/ci.yml/badge.svg)](https://github.com/Piro-Programmer/AI_POWERED_INTERVIEW_PLATFORM/actions/workflows/ci.yml)
+
 **Live demo:** https://ai-powered-interview-platform-hywork.vercel.app/
 
 ## Overview
@@ -219,6 +221,29 @@ http://localhost:5173
 
 In development, Vite proxies `/api` requests to `http://localhost:3000` (see `Frontend/vite.config.js`), so the frontend and backend share one origin and the auth cookie just works.
 
+## Testing and CI
+
+Every pull request and every push to `main` runs [GitHub Actions](.github/workflows/ci.yml): backend tests, frontend lint, tests and build. Vercel and Render deploy `main` automatically, so only code that passed these checks goes live.
+
+**Backend** (Vitest + Supertest + an in-memory MongoDB via `mongodb-memory-server`). The AI is mocked, so tests never call Groq:
+
+- auth: register/login validation, NoSQL-injection inputs rejected, per-account lockout after 10 failed sign-ins, logout blacklisting
+- reports: generation, input caps, PDF type/size, summaries without resume text, one generation at a time, **another user's report is always a 404**
+- quota: **20 parallel reservations against real MongoDB never exceed a limit of 10**, refunds, separate report/review allowances, burst limit
+- practice: answer review, validation, ownership, refunds, daily limit, best/last score summaries
+- app-wide: JSON 404/400/413 errors, security headers, CORS
+
+**Frontend** (Vitest + Testing Library + jsdom): the job-description markup engines, gap matching, practice ordering, plan-progress saving (batched, retried, old browser ticks uploaded), login errors, history search/sort/filter, and the practice answer and feedback components.
+
+```bash
+cd Backend && npm test
+```
+
+```bash
+cd Frontend && npm test
+```
+
+The first backend run downloads a MongoDB binary (about 100 MB) once; it's cached after that.
 ## Deployment
 
 The project runs with the **backend on Render** (a normal long-running Node server, so AI calls aren't cut off by serverless time limits) and the **frontend on Vercel**. Vercel forwards `/api/*` to Render, so the browser only ever talks to the Vercel domain and the login cookie stays first-party.
@@ -320,5 +345,6 @@ I built Interview Lab, an AI-powered interview preparation platform using the ME
 - REST API design
 - MongoDB data persistence, including an atomic per-user daily quota
 - Production hardening: rate limiting, input limits, security headers
+- Automated tests against a real in-memory database, and CI that gates every merge
 - Production deployment across Vercel and Render with a same-origin API proxy
 - A distinctive, interactive UI built without a component library
