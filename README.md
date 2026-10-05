@@ -4,6 +4,8 @@
 
 **Live demo:** https://ai-powered-interview-platform-hywork.vercel.app/
 
+[![Interview Lab landing page](docs/screenshots/01-landing.png)](https://ai-powered-interview-platform-hywork.vercel.app/)
+
 ## Overview
 
 Interview Lab is a full-stack web application built with the MERN stack and the Groq API. It helps candidates prepare for interviews in a focused, role-specific way.
@@ -76,6 +78,54 @@ Every response is validated against a strict schema before it reaches the user, 
 - Failed sign-ins are rate limited per account and per network; sign-ups per network
 - Input caps (job description, profile, resume text, request size) and PDF-only uploads up to 3 MB
 - Security headers via Helmet, and every error returned as JSON the UI can show
+
+## Screenshots
+
+Public pages are from the [live site](https://ai-powered-interview-platform-hywork.vercel.app/). Signed-in pages use a demo account with sample data.
+
+### Landing page
+
+The hero is a live demo: a real job description, marked up as you watch. Skills are highlighted, people skills underlined and recruiter phrases circled, each with a margin note.
+
+![Live job description markup demo](docs/screenshots/02-landing-demo.png)
+
+![What a report looks like, on the landing page](docs/screenshots/03-landing-report-preview.png)
+
+### Sign in and your desk
+
+| Sign in | Dashboard |
+|---|---|
+| ![Sign in page](docs/screenshots/04-login.png) | ![Dashboard](docs/screenshots/05-dashboard.png) |
+
+### New report and history
+
+| New report (with today's allowance) | Report history (search, sort, filter, plan progress) |
+|---|---|
+| ![New report form](docs/screenshots/06-new-report.png) | ![Report history](docs/screenshots/07-history.png) |
+
+### The report
+
+Match score, then your skill gaps marked on the posting itself, each linked to the plan day that covers it.
+
+![Report: match score and skill gaps on the job description](docs/screenshots/08-report.png)
+
+| Questions fold until you open them | Five-day plan, saved to your account |
+|---|---|
+| ![Technical questions](docs/screenshots/09-report-questions.png) | ![Preparation plan checklist](docs/screenshots/10-report-plan.png) |
+
+### Practice mode
+
+Answer each question by typing or speaking, then get AI feedback: a score, four criteria, what worked, what to fix, and a stronger version of your answer. Chips show your best score per question; re-drill brings back the weak ones.
+
+![Practice mode: question chips and answer card](docs/screenshots/11-practice.png)
+
+![Practice mode: AI feedback on an answer](docs/screenshots/12-practice-feedback.png)
+
+### On a phone
+
+| Landing | Practice |
+|---|---|
+| <img src="docs/screenshots/13-mobile-landing.png" alt="Landing page on a phone" width="320"> | <img src="docs/screenshots/14-mobile-practice.png" alt="Practice mode on a phone" width="320"> |
 
 ## How It Works
 

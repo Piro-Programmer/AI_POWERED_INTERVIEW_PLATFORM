@@ -111,7 +111,7 @@ const Interview = () => {
             <p className="eyebrow">New report</p>
             <h1>Mark up a <span className="hl">job description</span>.</h1>
             <p>
-              Paste the posting and tell us a little about yourself. Gemini reads both and writes the
+              Paste the posting and tell us a little about yourself. The AI reads both and writes the
               questions you're likely to get, with the reasoning behind each.
             </p>
           </div>
