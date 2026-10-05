@@ -35,8 +35,10 @@ app.use(cors({
 
 // Lightweight check for hosting platforms (e.g. Render's health check path).
 // Declared before the limiter so frequent health checks never count.
+// `commit` lets the CD pipeline confirm the tested commit is the one running
+// (Render sets RENDER_GIT_COMMIT for every deploy).
 app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "ok" });
+  res.status(200).json({ status: "ok", commit: process.env.RENDER_GIT_COMMIT || null });
 });
 
 app.use("/api", apiLimiter);

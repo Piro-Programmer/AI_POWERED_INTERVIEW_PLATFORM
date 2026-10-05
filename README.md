@@ -1,6 +1,6 @@
 # Interview Lab: AI-Powered Interview Preparation (MERN + Groq)
 
-[![CI](https://github.com/Piro-Programmer/AI_POWERED_INTERVIEW_PLATFORM/actions/workflows/ci.yml/badge.svg)](https://github.com/Piro-Programmer/AI_POWERED_INTERVIEW_PLATFORM/actions/workflows/ci.yml)
+[![CI/CD](https://github.com/Piro-Programmer/AI_POWERED_INTERVIEW_PLATFORM/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/Piro-Programmer/AI_POWERED_INTERVIEW_PLATFORM/actions/workflows/ci-cd.yml)
 
 **Live demo:** https://ai-powered-interview-platform-hywork.vercel.app/
 
@@ -221,9 +221,30 @@ http://localhost:5173
 
 In development, Vite proxies `/api` requests to `http://localhost:3000` (see `Frontend/vite.config.js`), so the frontend and backend share one origin and the auth cookie just works.
 
-## Testing and CI
+## CI/CD pipeline
 
-Every pull request and every push to `main` runs [GitHub Actions](.github/workflows/ci.yml): backend tests, frontend lint, tests and build. Vercel and Render deploy `main` automatically, so only code that passed these checks goes live.
+Every change goes through [GitHub Actions](.github/workflows/ci-cd.yml) before it can reach production:
+
+```text
+pull request ─► detect changes ─► backend tests ┐
+                                 frontend lint, │─► required checks ─► merge to main
+                                 tests, build   ┘
+
+push to main ─► detect changes ─► tests (as above) ─► deploy backend (Render) ─► deploy frontend (Vercel)
+                                                      exact tested commit,       after the API is live,
+                                                      waits for /api/health      waits for the new build,
+                                                      to report that commit      smoke-tests the live site
+```
+
+- **Only what changed runs:** backend changes test and deploy the backend; frontend changes the frontend; README-only changes skip both.
+- **Nothing deploys untested:** Render and Vercel auto-deploys are off; the pipeline triggers them through deploy hooks only after every test job passes.
+- **Exact commit, verified:** Render deploys the tested commit (`?ref=<sha>`). The pipeline then waits until `/api/health` reports it and the page's `app-version` meta tag shows it on Vercel.
+- **Safe ordering:** the API deploys first, so a new UI never talks to an old API.
+- **Smoke tests after deploy:** the live page loads, `/api/health` works through the Vercel proxy, and deep links like `/reports` load.
+- **Fast:** jobs run in parallel with npm and MongoDB-binary caches. Newer PR pushes cancel older runs; runs on `main` never cancel mid-deploy.
+- **Manual redeploy:** Actions → CI/CD → **Run workflow** re-tests and redeploys everything.
+
+### Tests
 
 **Backend** (Vitest + Supertest + an in-memory MongoDB via `mongodb-memory-server`). The AI is mocked, so tests never call Groq:
 
@@ -244,6 +265,7 @@ cd Frontend && npm test
 ```
 
 The first backend run downloads a MongoDB binary (about 100 MB) once; it's cached after that.
+
 ## Deployment
 
 The project runs with the **backend on Render** (a normal long-running Node server, so AI calls aren't cut off by serverless time limits) and the **frontend on Vercel**. Vercel forwards `/api/*` to Render, so the browser only ever talks to the Vercel domain and the login cookie stays first-party.
@@ -265,7 +287,8 @@ The project runs with the **backend on Render** (a normal long-running Node serv
    NODE_ENV=production
    ```
 
-4. Deploy, then open `https://<your-service>.onrender.com/api/health`. It should return `{"status":"ok"}`.
+4. Deploy, then open `https://<your-service>.onrender.com/api/health`. It should return `{"status":"ok", ...}`.
+5. In **Settings → Build & Deploy**, set **Auto-Deploy** to **Off** (the CI/CD pipeline deploys instead), and copy the **Deploy Hook** URL.
 
 On Render's free plan the service sleeps when idle, so the first request after a quiet period can take up to a minute.
 
@@ -279,6 +302,18 @@ On Render's free plan the service sleeps when idle, so the first request after a
 2. Set **Root Directory** to `Frontend`. Do not use the "Services" preset.
 3. The **Application Preset** should become **Vite** (build `npm run build`, output `dist`).
 4. Deploy. No environment variables are needed for this setup.
+5. In **Settings → Git → Deploy Hooks**, create a hook for the `main` branch and copy its URL. `vercel.json` already turns off Vercel's own automatic deploys of `main` (PR preview deployments still work).
+
+### 4. Connect the pipeline
+
+In the GitHub repo, open **Settings → Secrets and variables → Actions** and add two repository secrets:
+
+| Secret | Value |
+|---|---|
+| `RENDER_DEPLOY_HOOK_URL` | the Render deploy hook URL |
+| `VERCEL_DEPLOY_HOOK_URL` | the Vercel deploy hook URL |
+
+Deploy hooks are secret URLs: anyone holding one can trigger a deploy, so keep them only in GitHub secrets. From then on, every merge to `main` is tested and deployed by the pipeline.
 
 `vercel.json` also sends every non-API route to `index.html`, so refreshing `/dashboard` or `/interview` works.
 
@@ -345,6 +380,6 @@ I built Interview Lab, an AI-powered interview preparation platform using the ME
 - REST API design
 - MongoDB data persistence, including an atomic per-user daily quota
 - Production hardening: rate limiting, input limits, security headers
-- Automated tests against a real in-memory database, and CI that gates every merge
+- Automated tests against a real in-memory database, and a CI/CD pipeline that deploys only tested, verified commits
 - Production deployment across Vercel and Render with a same-origin API proxy
 - A distinctive, interactive UI built without a component library
