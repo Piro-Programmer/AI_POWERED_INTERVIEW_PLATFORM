@@ -7,6 +7,7 @@ import Home from "./pages/Home";
 import Landing from "./pages/Landing";
 import Reports from "./features/history/pages/Reports";
 import ReportDetail from "./features/history/pages/ReportDetail";
+import Practice from "./features/practice/pages/Practice";
 
 export const router = createBrowserRouter([
   {
@@ -28,6 +29,10 @@ export const router = createBrowserRouter([
   {
     path: "/reports/:id",
     element: <Protected><ReportDetail /></Protected>
+  },
+  {
+    path: "/reports/:id/practice",
+    element: <Protected><Practice /></Protected>
   },
   {
     path: "/login",

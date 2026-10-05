@@ -45,7 +45,7 @@ const ReportDetail = () => {
           <Link className="text-link" to="/reports">← All reports</Link>
           {report && (
             <button type="button" className="button secondary-button" onClick={practiseAgain}>
-              Practise this role again
+              New report for this role
             </button>
           )}
         </div>
