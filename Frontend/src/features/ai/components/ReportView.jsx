@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import MarkupSheet from "../../../components/MarkupSheet";
 import { gapMarkup } from "../gapMarkup";
 import ScoreDial from "./ScoreDial";
@@ -99,6 +100,11 @@ const ReportView = ({ report }) => {
             <a href="#behavioral">Behavioral</a>
             <a href="#prep-plan">Plan</a>
           </nav>
+          {report._id && (
+            <Link className="button primary-button report__practice" to={`/reports/${report._id}/practice`}>
+              Practise these questions →
+            </Link>
+          )}
         </div>
         <ScoreDial score={report.matchScore} />
       </header>
