@@ -27,6 +27,13 @@ export default defineConfig([
     },
   },
   {
+    // build config runs in Node, not the browser
+    files: ['vite.config.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
     // test helpers aren't hot-reloaded, so mixing exports is fine there
     files: ['src/test/**', '**/*.test.{js,jsx}'],
     rules: {
