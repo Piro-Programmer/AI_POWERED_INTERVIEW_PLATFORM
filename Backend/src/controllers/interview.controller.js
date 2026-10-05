@@ -134,8 +134,11 @@ async function generateInterviewReportController(req, res) {
  */
 async function getUsageController(req, res) {
   try {
-    const usage = await getUsage(req.user.id);
-    return res.status(200).json({ usage });
+    const [usage, reviewUsage] = await Promise.all([
+      getUsage(req.user.id, "report"),
+      getUsage(req.user.id, "review")
+    ]);
+    return res.status(200).json({ usage, reviewUsage });
   } catch (err) {
     console.error("getUsage failed:", err.message);
     return res.status(500).json({ message: "Failed to fetch usage", error: err.message });

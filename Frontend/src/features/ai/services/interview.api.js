@@ -20,7 +20,21 @@ export async function getMyReports() {
   return response.data;
 }
 
-/** Today's AI report allowance: { limit, used, remaining, resetsAt }. */
+/** Get AI feedback on one practice answer. kind: "technical" | "behavioral". */
+export async function submitPracticeAnswer(id, { kind, index, answer, durationSeconds, inputMode }) {
+  const response = await api.post(`/api/interview/${encodeURIComponent(id)}/practice`, {
+    kind, index, answer, durationSeconds, inputMode
+  });
+  return response.data;
+}
+
+/** Per-question practice stats and latest feedback for a report. */
+export async function getPracticeSummary(id) {
+  const response = await api.get(`/api/interview/${encodeURIComponent(id)}/practice`);
+  return response.data;
+}
+
+/** Today's AI allowances: { usage, reviewUsage }, each { limit, used, remaining, resetsAt }. */
 export async function getUsage() {
   const response = await api.get("/api/interview/usage");
   return response.data;

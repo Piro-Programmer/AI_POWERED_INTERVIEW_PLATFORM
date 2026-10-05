@@ -46,6 +46,13 @@ Every response is validated against a strict schema before it reaches the user, 
 - Five-day plan as a checklist with progress, saved to your account so it follows you across devices
 - While the report generates, your job description is shown being read, with an elapsed timer
 
+**Practice mode**
+- Answer each question by typing or speaking (browser speech-to-text in Chrome/Edge), with a two-minute interview clock
+- AI feedback on every answer: a 0-10 score, four criteria (structure, specificity, relevance, clarity), what worked, what to fix, and a stronger version of your answer
+- Behavioral answers are judged with STAR in mind; attempts to game the grader score 0-1
+- Question chips show your best score; re-drill mode brings back only the weak ones
+- Every attempt is saved, so you can see last and best scores per question
+
 **Report history**
 - Every saved report in one ledger: match score, date, top gaps and plan progress
 - Search, sort by date or score, and filter by plan progress
@@ -61,7 +68,7 @@ Every response is validated against a strict schema before it reaches the user, 
 - Deployed with the frontend on Vercel and the backend on Render
 
 **Limits and security**
-- Daily AI allowance per user (10 reports a day by default), shown on the new report page as "Reports left today"
+- Daily AI allowances per user, shown in the UI: 10 reports and 30 answer reviews a day by default
 - The allowance is reserved atomically in MongoDB, so parallel requests can't overshoot it, and a failed AI call gives it back
 - One report generation at a time per user, plus a short burst limit
 - Failed sign-ins are rate limited per account and per network; sign-ups per network
@@ -282,9 +289,11 @@ GET  /api/auth/get-me
 ```text
 POST /api/interview        # generate a report
 GET  /api/interview        # list your reports (summaries)
-GET  /api/interview/usage  # reports left today: { limit, used, remaining, resetsAt }
+GET  /api/interview/usage  # today's allowances: { usage, reviewUsage }, each { limit, used, remaining, resetsAt }
 GET  /api/interview/:id    # one report in full
 PATCH /api/interview/:id/progress   # save ticked plan tasks, body: { "completedTasks": ["0-1", "2-0"] }
+POST /api/interview/:id/practice    # review one answer, body: { kind, index, answer, durationSeconds, inputMode }
+GET  /api/interview/:id/practice    # per-question attempts, best/last score and latest feedback
 ```
 
 ### Health
@@ -295,9 +304,6 @@ GET  /api/health
 
 ## Future Improvements
 
-- Practice mode: flashcards with a timer and re-drilling weak answers
-- AI-based answer evaluation
-- Voice-based interview practice
 - Performance scoring dashboard
 - Difficulty levels: easy, medium, hard
 
