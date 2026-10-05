@@ -61,6 +61,14 @@ export const generateLimiter = limiter({
   message: "You're generating reports too quickly."
 });
 
+/** Practice answer reviews per signed-in user (runs after authUser). */
+export const reviewLimiter = limiter({
+  windowMs: MINUTE,
+  limit: 10,
+  keyGenerator: (req) => `review:${req.user.id}`,
+  message: "You're sending answers too quickly."
+});
+
 /** Plan-progress saves per signed-in user (runs after authUser). */
 export const progressLimiter = limiter({
   windowMs: MINUTE,

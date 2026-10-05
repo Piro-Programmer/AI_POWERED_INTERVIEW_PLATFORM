@@ -2,7 +2,8 @@ import express from "express";
 import authMiddleware from "../middlewares/auth.middleware.js";
 import interviewController from "../controllers/interview.controller.js";
 import upload from "../middlewares/file.middleware.js";
-import { generateLimiter, progressLimiter } from "../middlewares/rateLimit.middleware.js";
+import practiceController from "../controllers/practice.controller.js";
+import { generateLimiter, progressLimiter, reviewLimiter } from "../middlewares/rateLimit.middleware.js";
 
 const interviewRouter = express.Router();
 
@@ -63,6 +64,29 @@ interviewRouter.patch(
   authMiddleware.authUser,
   progressLimiter,
   interviewController.updateProgressController
+);
+
+/**
+ * @route POST /api/interview/:id/practice
+ * @description review one practice answer with AI and save the attempt
+ * @access private (rate limited, uses one of the daily review allowance)
+ */
+interviewRouter.post(
+  "/:id/practice",
+  authMiddleware.authUser,
+  reviewLimiter,
+  practiceController.submitPracticeAnswerController
+);
+
+/**
+ * @route GET /api/interview/:id/practice
+ * @description per-question practice stats and latest feedback for a report
+ * @access private
+ */
+interviewRouter.get(
+  "/:id/practice",
+  authMiddleware.authUser,
+  practiceController.getPracticeSummaryController
 );
 
 export default interviewRouter;
