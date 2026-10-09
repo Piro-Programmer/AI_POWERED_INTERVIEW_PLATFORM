@@ -4,6 +4,7 @@ import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import mongoose from "mongoose";
 import generateInterviewReport from "../services/ai.service.js";
 import interviewReportModel from "../models/interviewReport.model.js";
+import practiceAttemptModel from "../models/practiceAttempt.model.js";
 import { getUsage, refundGeneration, reserveGeneration } from "../services/aiQuota.service.js";
 
 function createReportTitle(jobDescription) {
@@ -99,7 +100,7 @@ async function generateInterviewReportController(req, res) {
     const interviewReport = await interviewReportModel.create({
       user: userId,
       title: createReportTitle(jobDescription),
-      resume: resumeText,
+      // resumeText is deliberately not saved: it's only needed for the AI call
       selfDescription,
       jobDescription,
       ...reportByAi
@@ -284,10 +285,42 @@ async function updateProgressController(req, res) {
   }
 }
 
+/**
+ * @name deleteReportController
+ * @description Delete one of the logged-in user's reports and its practice attempts.
+ * @access private
+ */
+async function deleteReportController(req, res) {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(404).json({ message: "Report not found" });
+    }
+
+    // Owner check is part of the query, so another user's id is just "not found"
+    const { deletedCount } = await interviewReportModel.deleteOne({ _id: id, user: req.user.id });
+    if (!deletedCount) {
+      return res.status(404).json({ message: "Report not found" });
+    }
+
+    await practiceAttemptModel.deleteMany({ report: id, user: req.user.id });
+
+    return res.status(200).json({ message: "Report deleted" });
+  } catch (err) {
+    console.error("deleteReport failed:", err.message);
+    return res.status(500).json({
+      message: "Failed to delete report",
+      error: err.message
+    });
+  }
+}
+
 export default {
   generateInterviewReportController,
   getUsageController,
   getMyReportsController,
   getReportByIdController,
-  updateProgressController
+  updateProgressController,
+  deleteReportController
 };

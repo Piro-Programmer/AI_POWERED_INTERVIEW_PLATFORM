@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import mongoose from "mongoose";
 
 vi.mock("../src/services/ai.service.js", () => ({ default: vi.fn(), evaluateAnswer: vi.fn() }));
 const { default: app } = await import("../src/app.js");
@@ -8,13 +9,24 @@ describe("app-wide behaviour", () => {
   it("health check answers ok and reports the running commit", async () => {
     const res = await request(app).get("/api/health");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: "ok", commit: null });
+    expect(res.body).toEqual({ status: "ok", db: "up", commit: null });
 
     process.env.RENDER_GIT_COMMIT = "abc123";
     try {
       expect((await request(app).get("/api/health")).body.commit).toBe("abc123");
     } finally {
       delete process.env.RENDER_GIT_COMMIT;
+    }
+  });
+
+  it("health check answers 503 while the database is down", async () => {
+    const spy = vi.spyOn(mongoose.connection, "readyState", "get").mockReturnValue(0);
+    try {
+      const res = await request(app).get("/api/health");
+      expect(res.status).toBe(503);
+      expect(res.body).toMatchObject({ status: "degraded", db: "down" });
+    } finally {
+      spy.mockRestore();
     }
   });
 

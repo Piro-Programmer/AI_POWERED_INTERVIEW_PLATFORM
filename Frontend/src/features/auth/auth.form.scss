@@ -162,3 +162,10 @@
     display: none;
   }
 }
+
+.input-hint {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}

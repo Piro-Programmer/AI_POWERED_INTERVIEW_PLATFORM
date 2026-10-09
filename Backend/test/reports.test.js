@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
-import { authCookie, createReport, createUser, fakeReport } from "./helpers.js";
+import mongoose from "mongoose";
+import { authCookie, createReport, createUser, fakeFeedback, fakeReport } from "./helpers.js";
 
 vi.mock("../src/services/ai.service.js", () => ({ default: vi.fn(), evaluateAnswer: vi.fn() }));
 const { default: generateInterviewReport } = await import("../src/services/ai.service.js");
 const { default: app } = await import("../src/app.js");
 const { default: interviewReportModel } = await import("../src/models/interviewReport.model.js");
+const { default: practiceAttemptModel } = await import("../src/models/practiceAttempt.model.js");
 
 const generate = (user, fields = { jobDescription: "Backend developer, Node.js" }) => {
   const req = request(app).post("/api/interview").set("Cookie", authCookie(user));
@@ -122,6 +124,47 @@ describe("reading reports", () => {
 
     const invalid = await request(app).get("/api/interview/not-an-id").set("Cookie", authCookie(owner));
     expect(invalid.status).toBe(404);
+  });
+});
+
+describe("resume privacy", () => {
+  it("doesn't store resume text with a generated report", async () => {
+    const user = await createUser();
+    const res = await generate(user);
+    expect(res.status).toBe(201);
+
+    const raw = await interviewReportModel.collection.findOne({ _id: new mongoose.Types.ObjectId(res.body.interviewReport._id) });
+    expect(raw).not.toHaveProperty("resume");
+  });
+});
+
+describe("DELETE /api/interview/:id", () => {
+  it("deletes the owner's report and its practice attempts, 404 for anyone else", async () => {
+    const owner = await createUser();
+    const stranger = await createUser();
+    const report = await createReport(owner);
+    await practiceAttemptModel.create({
+      user: owner._id, report: report._id, kind: "technical", questionIndex: 0, answer: "x", feedback: fakeFeedback()
+    });
+
+    const theirs = await request(app).delete(`/api/interview/${report._id}`).set("Cookie", authCookie(stranger));
+    expect(theirs.status).toBe(404);
+    expect(await interviewReportModel.countDocuments()).toBe(1);
+
+    const own = await request(app).delete(`/api/interview/${report._id}`).set("Cookie", authCookie(owner));
+    expect(own.status).toBe(200);
+    expect(await interviewReportModel.countDocuments()).toBe(0);
+    expect(await practiceAttemptModel.countDocuments()).toBe(0);
+
+    const again = await request(app).delete(`/api/interview/${report._id}`).set("Cookie", authCookie(owner));
+    expect(again.status).toBe(404);
+    const invalid = await request(app).delete("/api/interview/not-an-id").set("Cookie", authCookie(owner));
+    expect(invalid.status).toBe(404);
+  });
+
+  it("requires a signed-in user", async () => {
+    const report = await createReport(await createUser());
+    expect((await request(app).delete(`/api/interview/${report._id}`)).status).toBe(401);
   });
 });
 

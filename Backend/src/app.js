@@ -6,6 +6,7 @@ import interviewRouter from "./routes/interview.routes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { apiLimiter } from "./middlewares/rateLimit.middleware.js";
+import { isDBConnected } from "./config/database.js";
 
 const app = express();
 
@@ -36,9 +37,15 @@ app.use(cors({
 // Lightweight check for hosting platforms (e.g. Render's health check path).
 // Declared before the limiter so frequent health checks never count.
 // `commit` lets the CD pipeline confirm the tested commit is the one running
-// (Render sets RENDER_GIT_COMMIT for every deploy).
+// (Render sets RENDER_GIT_COMMIT for every deploy). Answers 503 while the
+// database is unreachable, so the platform and the pipeline see the outage.
 app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "ok", commit: process.env.RENDER_GIT_COMMIT || null });
+  const dbUp = isDBConnected();
+  res.status(dbUp ? 200 : 503).json({
+    status: dbUp ? "ok" : "degraded",
+    db: dbUp ? "up" : "down",
+    commit: process.env.RENDER_GIT_COMMIT || null
+  });
 });
 
 app.use("/api", apiLimiter);

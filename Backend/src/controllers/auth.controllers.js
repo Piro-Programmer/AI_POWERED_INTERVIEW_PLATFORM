@@ -16,6 +16,18 @@ const cookieOptions = {
   path: "/"
 };
 
+// bcrypt ignores everything past 72 bytes, so longer passwords aren't safer.
+const PASSWORD_MIN = 8;
+const PASSWORD_MAX = 72;
+
+/** Returns a message describing what's wrong with the password, or null. */
+export function checkPassword(password) {
+  if (password.length < PASSWORD_MIN) return `Password must be at least ${PASSWORD_MIN} characters.`;
+  if (Buffer.byteLength(password) > PASSWORD_MAX) return `Password must be at most ${PASSWORD_MAX} characters.`;
+  if (!/[a-z]/i.test(password) || !/\d/.test(password)) return "Password must contain a letter and a number.";
+  return null;
+}
+
 /**
  * @name registerUserController
  * @description register a new user,ecpects username, email, password in the request
@@ -32,6 +44,11 @@ async function registerUserController(req, res) {
     return res.status(400).json({
       message: "Please provide username, email and password"
     });
+  }
+
+  const passwordProblem = checkPassword(password);
+  if (passwordProblem) {
+    return res.status(400).json({ message: passwordProblem });
   }
 
   const isUserAlreadyExists = await userModel.findOne({
@@ -128,7 +145,14 @@ async function logoutUserController(req, res) {
   const token = req.cookies.token;
 
   if (token) {
-    await tokenBlacklistModel.create({ token });
+    // Keep the entry only as long as the token could still be used
+    const exp = jwt.decode(token)?.exp;
+    const expiresAt = typeof exp === "number" ? new Date(exp * 1000) : undefined;
+    await tokenBlacklistModel.updateOne(
+      { token },
+      { $setOnInsert: { token, ...(expiresAt && { expiresAt }) } },
+      { upsert: true, setDefaultsOnInsert: true }
+    );
   }
 
   res.clearCookie("token", cookieOptions);
