@@ -365,6 +365,20 @@
   gap: 1rem;
 }
 
+.detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.detail__error {
+  margin-top: 1rem;
+  padding: 0.7rem 0.85rem;
+  border-left: 3px solid var(--pen);
+  color: var(--pen);
+  background: var(--pen-soft);
+}
+
 .page-loading--inline {
   min-height: 40vh;
 }

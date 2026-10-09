@@ -46,6 +46,12 @@ export async function saveProgress(id, completedTasks) {
   return response.data;
 }
 
+/** Delete one report (and its practice attempts) for good. */
+export async function deleteReport(id) {
+  const response = await api.delete(`/api/interview/${encodeURIComponent(id)}`);
+  return response.data;
+}
+
 /** Fetch one full report by id. */
 export async function getReport(id) {
   const response = await api.get(`/api/interview/${encodeURIComponent(id)}`);

@@ -55,6 +55,17 @@ interviewRouter.get(
 );
 
 /**
+ * @route DELETE /api/interview/:id
+ * @description delete one of the logged-in user's reports and its practice attempts
+ * @access private
+ */
+interviewRouter.delete(
+  "/:id",
+  authMiddleware.authUser,
+  interviewController.deleteReportController
+);
+
+/**
  * @route PATCH /api/interview/:id/progress
  * @description save which preparation-plan tasks are ticked
  * @access private (rate limited)

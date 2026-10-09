@@ -16,6 +16,11 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    // Same rule as the server, checked here so the user doesn't wait for a round trip
+    if (!/[a-z]/i.test(password) || !/\d/.test(password)) {
+      setError("Password must contain a letter and a number.");
+      return;
+    }
     const result = await handleRegister({ username, email, password });
     if (result.ok) {
       navigate("/dashboard");
@@ -86,8 +91,12 @@ const Register = () => {
               id="password"
               name="password"
               autoComplete="new-password"
+              aria-describedby="password-hint"
+              minLength={8}
+              maxLength={72}
               required
             />
+            <small id="password-hint" className="input-hint">At least 8 characters, with a letter and a number.</small>
           </div>
 
           {error && <p className="auth-error" role="alert">{error}</p>}
