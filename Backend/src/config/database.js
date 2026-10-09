@@ -18,16 +18,18 @@ async function connectToDB() {
   await tokenBlacklistModel.syncIndexes();
 
   // One-off cleanups for data saved before these rules existed; both are
-  // no-ops once nothing matches.
+  // no-ops once nothing matches. A failure here is logged, not fatal: the
+  // database is reachable, so the server should still start.
   await Promise.all([
     // blacklist entries without expiresAt would never be removed by the TTL index
     tokenBlacklistModel.updateMany(
       { expiresAt: { $exists: false } },
-      [{ $set: { expiresAt: { $add: [{ $ifNull: ["$createdAt", "$$NOW"] }, DAY_MS] } } }]
+      [{ $set: { expiresAt: { $add: [{ $ifNull: ["$createdAt", "$$NOW"] }, DAY_MS] } } }],
+      { updatePipeline: true } // Mongoose 9 refuses pipeline updates without this
     ),
     // resume text is only needed for the AI call, never stored afterwards
     interviewReportModel.updateMany({ resume: { $exists: true } }, { $unset: { resume: "" } })
-  ]);
+  ]).catch((err) => console.error("Startup data cleanup failed:", err.message));
 }
 
 /** True when the app can talk to MongoDB right now. */
