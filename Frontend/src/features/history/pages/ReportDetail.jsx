@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AppSidebar from "../../../components/AppSidebar";
 import ReportView from "../../ai/components/ReportView";
-import { getReport } from "../../ai/services/interview.api";
+import { deleteReport, getReport } from "../../ai/services/interview.api";
 import "../history.scss";
 
 const ReportDetail = () => {
@@ -36,6 +36,22 @@ const ReportDetail = () => {
   const practiseAgain = () =>
     navigate("/interview", { state: { jobDescription: report?.jobDescription || "" } });
 
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  const remove = async () => {
+    if (!window.confirm("Delete this report and its practice answers? This can't be undone.")) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await deleteReport(id);
+      navigate("/reports", { replace: true });
+    } catch (err) {
+      setDeleteError(err.response?.data?.message || "We couldn't delete this report. Try again.");
+      setDeleting(false);
+    }
+  };
+
   return (
     <main className="workspace-page">
       <AppSidebar />
@@ -44,11 +60,18 @@ const ReportDetail = () => {
         <div className="detail__bar">
           <Link className="text-link" to="/reports">← All reports</Link>
           {report && (
-            <button type="button" className="button secondary-button" onClick={practiseAgain}>
-              New report for this role
-            </button>
+            <div className="detail__actions">
+              <button type="button" className="button secondary-button" onClick={practiseAgain}>
+                New report for this role
+              </button>
+              <button type="button" className="button danger-button" onClick={remove} disabled={deleting}>
+                {deleting ? "Deleting…" : "Delete report"}
+              </button>
+            </div>
           )}
         </div>
+
+        {deleteError && <p className="detail__error" role="alert">{deleteError}</p>}
 
         {!report && !error && <p className="page-loading page-loading--inline">opening your report…</p>}
 

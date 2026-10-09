@@ -76,8 +76,11 @@ const interviewReportSchema = new mongoose.Schema({
     required: [true, "Job description is required"]
 
   },
+  // No longer saved (privacy); kept in the schema so the startup cleanup can
+  // $unset it from reports created before that change.
   resume: {
     type: String,
+    select: false
   },
   selfDescription:{
     type: String,

@@ -4,6 +4,8 @@ import { createUser } from "./helpers.js";
 
 vi.mock("../src/services/ai.service.js", () => ({ default: vi.fn(), evaluateAnswer: vi.fn() }));
 const { default: app } = await import("../src/app.js");
+const { default: tokenBlacklistModel } = await import("../src/models/blacklist.model.js");
+const { default: jwt } = await import("jsonwebtoken");
 
 const login = (body) => request(app).post("/api/auth/login").send(body);
 const cookieFrom = (res) => res.headers["set-cookie"]?.find((c) => c.startsWith("token="))?.split(";")[0];
@@ -25,7 +27,7 @@ describe("register", () => {
     await createUser({ username: "sam", email: "sam@example.test" });
     const res = await request(app)
       .post("/api/auth/register")
-      .send({ username: "sam", email: "other@example.test", password: "pw" });
+      .send({ username: "sam", email: "other@example.test", password: "pw-123456" });
     expect(res.status).toBe(400);
     expect(res.body.message).toMatch(/already exists/);
   });
@@ -37,6 +39,19 @@ describe("register", () => {
   ])("returns 400 for %s", async (_label, body) => {
     const res = await request(app).post("/api/auth/register").send(body);
     expect(res.status).toBe(400);
+  });
+
+  it.each([
+    ["shorter than 8 characters", "abc123", /at least 8/],
+    ["longer than 72 bytes", `a1${"x".repeat(71)}`, /at most 72/],
+    ["without a number", "password-only", /letter and a number/],
+    ["without a letter", "12345678", /letter and a number/]
+  ])("rejects a password %s", async (_label, password, message) => {
+    const res = await request(app)
+      .post("/api/auth/register")
+      .send({ username: "weak", email: "weak@example.test", password });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(message);
   });
 });
 
@@ -101,6 +116,22 @@ describe("session", () => {
     const reused = await request(app).get("/api/auth/get-me").set("Cookie", cookie);
     expect(reused.status).toBe(401);
   });
+
+  it("blacklist entries expire when the token does, and logging out twice adds one entry", async () => {
+    await createUser({ email: "eve@example.test" });
+    const cookie = cookieFrom(await login({ email: "eve@example.test", password: "right-password" }));
+    const { exp } = jwt.decode(cookie.slice("token=".length));
+
+    await request(app).get("/api/auth/logout").set("Cookie", cookie);
+    await request(app).get("/api/auth/logout").set("Cookie", cookie);
+
+    const entries = await tokenBlacklistModel.find().lean();
+    expect(entries).toHaveLength(1);
+    expect(entries[0].expiresAt.getTime()).toBe(exp * 1000);
+
+    const ttl = (await tokenBlacklistModel.collection.indexes()).find((i) => i.key.expiresAt === 1);
+    expect(ttl.expireAfterSeconds).toBe(0);
+  });
 });
 
 describe("register rate limit", () => {
@@ -111,7 +142,7 @@ describe("register rate limit", () => {
     while (status !== 429 && created < 20) {
       const res = await request(app)
         .post("/api/auth/register")
-        .send({ username: `bulk${created}`, email: `bulk${created}@example.test`, password: "pw" });
+        .send({ username: `bulk${created}`, email: `bulk${created}@example.test`, password: "pw-123456" });
       status = res.status;
       if (status === 429) expect(res.body.message).toMatch(/Too many accounts created from your network/);
       created += 1;

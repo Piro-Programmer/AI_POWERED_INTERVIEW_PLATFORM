@@ -75,3 +75,15 @@
     background-size: 100% 80%;
   }
 }
+
+// Destructive actions: red pen outline, filled on hover.
+.danger-button {
+  color: var(--pen);
+  border-color: var(--pen);
+  background: transparent;
+
+  &:hover:not(:disabled) {
+    color: var(--paper-raised);
+    background: var(--pen);
+  }
+}
