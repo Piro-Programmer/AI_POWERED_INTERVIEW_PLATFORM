@@ -21,6 +21,15 @@ export default defineConfig({
       '/api': 'http://localhost:3000',
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Libraries change far less often than app code: in their own chunk,
+        // browsers keep them cached across deploys.
+        manualChunks: (id) => (id.includes('node_modules') ? 'vendor' : undefined),
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
