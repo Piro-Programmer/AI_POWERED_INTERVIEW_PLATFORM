@@ -1,0 +1,15 @@
+{
+  "name": "interview-lab-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Browser end-to-end tests: real frontend build + real backend (in-memory MongoDB, fake AI)",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "mongodb-memory-server": "^11.3.0"
+  }
+}
