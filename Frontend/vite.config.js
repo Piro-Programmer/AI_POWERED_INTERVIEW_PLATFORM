@@ -16,9 +16,10 @@ const appVersion = () => ({
 export default defineConfig({
   plugins: [react(), appVersion()],
   server: {
-    // Same-origin /api in development, mirroring the vercel.json rewrite
+    // Same-origin /api in development (and `vite preview`), mirroring the
+    // vercel.json rewrite. The e2e tests point it at their own backend.
     proxy: {
-      '/api': 'http://localhost:3000',
+      '/api': process.env.API_PROXY_TARGET || 'http://localhost:3000',
     },
   },
   build: {
