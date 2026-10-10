@@ -277,8 +277,10 @@ Every change goes through [GitHub Actions](.github/workflows/ci-cd.yml) before i
 
 ```text
 pull request ─► detect changes ─► backend tests ┐
-                                 frontend lint, │─► required checks ─► merge to main
-                                 tests, build   ┘
+                                 frontend lint, │
+                                 tests, build   │─► required checks ─► merge to main
+                                 end-to-end     ┘
+                                 (Playwright)
 
 push to main ─► detect changes ─► tests (as above) ─► deploy backend (Render) ─► deploy frontend (Vercel)
                                                       exact tested commit,       after the API is live,
@@ -313,6 +315,22 @@ cd Backend && npm test
 ```bash
 cd Frontend && npm test
 ```
+
+**End-to-end** (Playwright, Chromium): a real browser against the production frontend build, which proxies `/api` to the real backend running on an in-memory MongoDB. Only the AI is replaced, by a fixed fake loaded through a Node module hook ([e2e/server](e2e/server)), so the backend code itself is unchanged and no Groq quota is used.
+
+- sign-up refuses a weak password, then signs in; signed-out users are sent to sign in; sign out, wrong password, sign back in
+- generate a report → practise a question and get feedback → find it in your reports → delete it
+- a report link opened from another account shows "not found"
+
+```bash
+cd e2e && npm ci && npx playwright install chromium
+```
+
+```bash
+npm test
+```
+
+It needs `npm ci` in Backend and Frontend first. On failure, `npm run report` opens the HTML report with traces and screenshots; in CI it's uploaded as the `playwright-report` artifact.
 
 The first backend run downloads a MongoDB binary (about 100 MB) once; it's cached after that.
 
@@ -401,6 +419,7 @@ POST /api/interview        # generate a report
 GET  /api/interview        # list your reports (summaries)
 GET  /api/interview/usage  # today's allowances: { usage, reviewUsage }, each { limit, used, remaining, resetsAt }
 GET  /api/interview/:id    # one report in full
+DELETE /api/interview/:id  # delete a report and its practice attempts
 PATCH /api/interview/:id/progress   # save ticked plan tasks, body: { "completedTasks": ["0-1", "2-0"] }
 POST /api/interview/:id/practice    # review one answer, body: { kind, index, answer, durationSeconds, inputMode }
 GET  /api/interview/:id/practice    # per-question attempts, best/last score and latest feedback
