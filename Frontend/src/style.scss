@@ -393,3 +393,43 @@ a {
     gap: 1.5rem;
   }
 }
+
+// ---------------------------------------------------------------------------
+// "Waking up the server" note, pinned to the bottom while a cold start lasts.
+
+.wake-notice {
+  position: fixed;
+  left: 50%;
+  bottom: 1rem;
+  z-index: 50;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  box-shadow: var(--shadow-paper);
+  font-size: 0.93rem;
+  color: var(--ink);
+}
+
+.wake-notice__dot {
+  flex: none;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--hl);
+  border: 1px solid var(--ink);
+  animation: wake-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes wake-pulse {
+  50% {
+    transform: scale(1.5);
+    opacity: 0.6;
+  }
+}
