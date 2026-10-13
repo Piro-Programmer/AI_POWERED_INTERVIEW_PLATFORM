@@ -46,6 +46,15 @@ export const loginAccountLimiter = limiter({
   message: "Too many sign-in attempts for this account."
 });
 
+/** Wrong current-password attempts on account changes, per signed-in user (runs after authUser). */
+export const passwordCheckLimiter = limiter({
+  windowMs: 15 * MINUTE,
+  limit: 10,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => `password-check:${req.user.id}`,
+  message: "Too many wrong password attempts."
+});
+
 /** New accounts per IP address. */
 export const registerLimiter = limiter({
   windowMs: 60 * MINUTE,

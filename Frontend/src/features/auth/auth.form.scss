@@ -169,3 +169,55 @@
   color: var(--muted);
   font-size: 0.85rem;
 }
+
+// --- account page
+
+.account {
+  display: grid;
+  gap: 2rem;
+  max-width: 34rem;
+  margin-top: 2rem;
+
+  &__section {
+    padding: 1.5rem;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius);
+    background: var(--paper-raised);
+
+    h3 {
+      margin: 0 0 0.35rem;
+      font-family: var(--serif);
+      font-size: 1.35rem;
+    }
+
+    > p {
+      margin: 0 0 1.2rem;
+      color: var(--muted);
+    }
+
+    form {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .button {
+      justify-self: start;
+    }
+  }
+
+  &__section--danger {
+    border-color: var(--pen);
+
+    h3 {
+      color: var(--pen);
+    }
+  }
+
+  &__ok {
+    padding: 0.7rem 0.85rem;
+    border-left: 3px solid var(--ok);
+    color: var(--ok);
+    background: rgba(47, 125, 79, 0.08);
+    font-size: 0.93rem;
+  }
+}
