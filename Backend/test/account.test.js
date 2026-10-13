@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import jwt from "jsonwebtoken";
 import { authCookie, createReport, createUser, fakeFeedback } from "./helpers.js";
 
 vi.mock("../src/services/ai.service.js", () => ({ default: vi.fn(), evaluateAnswer: vi.fn() }));
@@ -15,16 +16,23 @@ const getMe = (cookie) => request(app).get("/api/auth/get-me").set("Cookie", coo
 const changePassword = (cookie, body) => request(app).patch("/api/auth/password").set("Cookie", cookie).send(body);
 const deleteAccount = (cookie, body) => request(app).delete("/api/auth/account").set("Cookie", cookie).send(body);
 
-// iat has one-second resolution: make sure "earlier" sessions really are earlier
-const nextSecond = () => new Promise((r) => setTimeout(r, 1100));
+// A session started a minute ago on another device. Minted directly so the
+// test doesn't depend on wall-clock timing (iat has one-second resolution).
+const earlierSession = (user) =>
+  `token=${jwt.sign(
+    { id: String(user._id), username: user.username, iat: Math.floor(Date.now() / 1000) - 60 },
+    process.env.JWT_SECRET,
+    { expiresIn: "1d" }
+  )}`;
 
 describe("PATCH /api/auth/password", () => {
   it("changes the password, keeps this session and signs out the others", async () => {
-    await createUser({ email: "pat@example.test" });
-    const other = cookieFrom(await login("pat@example.test", "right-password"));
-    await nextSecond(); // otherwise both logins get the identical token
+    const user = await createUser({ email: "pat@example.test" });
+    const other = earlierSession(user);
+    // a session from moments ago, in the very same second as the change
+    const sameSecond = cookieFrom(await login("pat@example.test", "right-password"));
     const current = cookieFrom(await login("pat@example.test", "right-password"));
-    await nextSecond();
+    expect((await getMe(other)).status).toBe(200);
 
     const res = await changePassword(current, { currentPassword: "right-password", newPassword: "new-pass-123" });
     expect(res.status).toBe(200);
@@ -36,6 +44,7 @@ describe("PATCH /api/auth/password", () => {
     const otherDevice = await getMe(other);
     expect(otherDevice.status).toBe(401);
     expect(otherDevice.body.message).toMatch(/session has ended/);
+    expect((await getMe(sameSecond)).status).toBe(401);
 
     expect((await login("pat@example.test", "right-password")).status).toBe(400);
     expect((await login("pat@example.test", "new-pass-123")).status).toBe(200);
@@ -107,5 +116,22 @@ describe("DELETE /api/auth/account", () => {
     const missing = await deleteAccount(authCookie(user), {});
     expect(missing.status).toBe(400);
     expect(await userModel.exists({ _id: user._id })).toBeTruthy();
+  });
+});
+
+describe("sessions", () => {
+  it("two sign-ins in the same second get different tokens, so signing out one keeps the other", async () => {
+    await createUser({ email: "twin@example.test" });
+    const [a, b] = await Promise.all([
+      login("twin@example.test", "right-password"),
+      login("twin@example.test", "right-password")
+    ]);
+    const first = cookieFrom(a);
+    const second = cookieFrom(b);
+    expect(first).not.toBe(second);
+
+    await request(app).get("/api/auth/logout").set("Cookie", first);
+    expect((await getMe(first)).status).toBe(401);
+    expect((await getMe(second)).status).toBe(200);
   });
 });
