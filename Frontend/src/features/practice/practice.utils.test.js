@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatClock, formatScore, isWeak, listQuestions, nextQuestion, practiceQueue, scoreBand } from "./practice.utils";
+import { formatClock, formatScore, isWeak, listQuestions, nextQuestion, practiceQueue, questionName, scoreBand, sessionSummary } from "./practice.utils";
 
 const report = {
   technicalQuestions: [1, 2, 3].map((n) => ({ question: `T${n}?`, intention: "i", answer: "a" })),
@@ -51,5 +51,44 @@ describe("formatting", () => {
     expect(formatScore(8.5)).toBe("8.5");
     expect(formatClock(0)).toBe("0:00");
     expect(formatClock(125.7)).toBe("2:05");
+  });
+});
+
+describe("session summary", () => {
+  const entry = (key, kind, score, specificity) => ({
+    key,
+    kind,
+    index: Number(key.slice(1)) - 1,
+    score,
+    criteria: { structure: 4, specificity, relevance: 4, clarity: 4 }
+  });
+
+  it("is empty until something is answered", () => {
+    expect(sessionSummary([])).toBeNull();
+  });
+
+  it("averages the session and names the weakest kind, criterion, best and worst", () => {
+    const summary = sessionSummary([
+      entry("T1", "technical", 8, 4),
+      entry("B1", "behavioral", 5, 2),
+      entry("T1", "technical", 9, 4),
+      entry("T2", "technical", 6.5, 3)
+    ]);
+    expect(summary).toMatchObject({
+      answered: 4,
+      questions: 3,
+      average: 7.1,
+      kindAverages: { technical: 7.8, behavioral: 5 },
+      weakestKind: "behavioral",
+      weakestCriterion: "specificity"
+    });
+    expect(summary.best.score).toBe(9);
+    expect(questionName(summary.worst)).toBe("Behavioral Q1");
+  });
+
+  it("doesn't name a weakest kind or a lowest answer when there's nothing to compare", () => {
+    const summary = sessionSummary([entry("T1", "technical", 7, 3), entry("T2", "technical", 7, 4)]);
+    expect(summary.weakestKind).toBeNull();
+    expect(summary.worst).toBeNull();
   });
 });

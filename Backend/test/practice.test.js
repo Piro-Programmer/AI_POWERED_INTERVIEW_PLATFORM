@@ -109,3 +109,56 @@ describe("GET /api/interview/:id/practice", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("GET /api/interview/:id/practice/progress", () => {
+  const attempt = (user, report, kind, score, criteria, createdAt = new Date()) =>
+    practiceAttemptModel.create({
+      user: user._id,
+      report: report._id,
+      kind,
+      questionIndex: 0,
+      answer: ANSWER,
+      feedback: { ...fakeFeedback(score), criteria },
+      createdAt
+    });
+
+  const progress = (user, reportId) =>
+    request(app).get(`/api/interview/${reportId}/practice/progress`).set("Cookie", authCookie(user));
+
+  it("averages overall, per kind and per criterion, finds the weakest, and trends by day", async () => {
+    const user = await createUser();
+    const report = await createReport(user);
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await attempt(user, report, "technical", 8, { structure: 4, specificity: 4, relevance: 5, clarity: 4 }, yesterday);
+    await attempt(user, report, "technical", 6, { structure: 3, specificity: 2, relevance: 4, clarity: 4 });
+    await attempt(user, report, "behavioral", 4, { structure: 2, specificity: 1, relevance: 3, clarity: 3 });
+    // another report's attempt doesn't count
+    await attempt(user, await createReport(user), "technical", 10, { structure: 5, specificity: 5, relevance: 5, clarity: 5 });
+
+    const res = await progress(user, report._id);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      attempts: 3,
+      average: 6,
+      byKind: { technical: { attempts: 2, average: 7 }, behavioral: { attempts: 1, average: 4 } },
+      criteria: { structure: 3, specificity: 2.3, relevance: 4, clarity: 3.7 },
+      weakest: { kind: "behavioral", criterion: "specificity" }
+    });
+    expect(res.body.trend).toEqual([
+      { day: yesterday.toISOString().slice(0, 10), attempts: 1, average: 8 },
+      { day: new Date().toISOString().slice(0, 10), attempts: 2, average: 5 }
+    ]);
+  });
+
+  it("returns an empty summary before any practice, and 404 for someone else's report", async () => {
+    const user = await createUser();
+    const report = await createReport(user);
+
+    const empty = await progress(user, report._id);
+    expect(empty.body).toEqual({ attempts: 0, average: null, byKind: {}, criteria: {}, weakest: null, trend: [] });
+
+    const stranger = await createUser();
+    expect((await progress(stranger, report._id)).status).toBe(404);
+    expect((await progress(user, "nope")).status).toBe(404);
+  });
+});
