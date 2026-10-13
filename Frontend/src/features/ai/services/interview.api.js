@@ -34,6 +34,12 @@ export async function getPracticeSummary(id) {
   return response.data;
 }
 
+/** Practice progress for a report: averages, weakest area and a daily score trend. */
+export async function getPracticeProgress(id) {
+  const response = await api.get(`/api/interview/${encodeURIComponent(id)}/practice/progress`);
+  return response.data;
+}
+
 /** Today's AI allowances: { usage, reviewUsage }, each { limit, used, remaining, resetsAt }. */
 export async function getUsage() {
   const response = await api.get("/api/interview/usage");

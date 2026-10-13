@@ -100,4 +100,16 @@ interviewRouter.get(
   practiceController.getPracticeSummaryController
 );
 
+/**
+ * @route GET /api/interview/:id/practice/progress
+ * @description practice averages (overall, per kind, per criterion), weakest
+ *              area, and a 30-day daily score trend for a report
+ * @access private
+ */
+interviewRouter.get(
+  "/:id/practice/progress",
+  authMiddleware.authUser,
+  practiceController.getPracticeProgressController
+);
+
 export default interviewRouter;
