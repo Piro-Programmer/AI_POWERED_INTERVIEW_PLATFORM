@@ -35,6 +35,10 @@ export const router = createBrowserRouter([
     lazy: page(() => import("./features/practice/pages/Practice"), { protect: true })
   },
   {
+    path: "/account",
+    lazy: page(() => import("./features/auth/pages/Account"), { protect: true })
+  },
+  {
     path: "/login",
     lazy: page(() => import("./features/auth/pages/Login"))
   },

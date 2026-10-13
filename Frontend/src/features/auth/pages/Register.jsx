@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import "../auth.form.scss";
 import Wordmark from "../../../components/Wordmark";
+import { PASSWORD_HINT, passwordProblem } from "../password";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -16,9 +17,9 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    // Same rule as the server, checked here so the user doesn't wait for a round trip
-    if (!/[a-z]/i.test(password) || !/\d/.test(password)) {
-      setError("Password must contain a letter and a number.");
+    const problem = passwordProblem(password);
+    if (problem) {
+      setError(problem);
       return;
     }
     const result = await handleRegister({ username, email, password });
@@ -96,7 +97,7 @@ const Register = () => {
               maxLength={72}
               required
             />
-            <small id="password-hint" className="input-hint">At least 8 characters, with a letter and a number.</small>
+            <small id="password-hint" className="input-hint">{PASSWORD_HINT}</small>
           </div>
 
           {error && <p className="auth-error" role="alert">{error}</p>}
