@@ -1,6 +1,7 @@
 import userModel from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { randomUUID } from "node:crypto";
 import tokenBlacklistModel from "../models/blacklist.model.js";
 import interviewReportModel from "../models/interviewReport.model.js";
 import practiceAttemptModel from "../models/practiceAttempt.model.js";
@@ -31,12 +32,17 @@ export function checkPassword(password) {
   return null;
 }
 
-/** Sign `user` in: a 1-day JWT in an httpOnly cookie. */
-function startSession(res, user) {
+/**
+ * Sign `user` in: a 1-day JWT in an httpOnly cookie. `iat` (seconds) is only
+ * passed after a password change, see changePasswordController.
+ */
+function startSession(res, user, iat) {
+  // jwtid makes every token unique: without it, two sign-ins in the same
+  // second produce the identical token, and revoking one revokes both.
   const token = jwt.sign(
-    { id: user._id, username: user.username },
+    { id: user._id, username: user.username, ...(iat && { iat }) },
     process.env.JWT_SECRET,
-    { expiresIn: "1d" }
+    { expiresIn: "1d", jwtid: randomUUID() }
   );
 
   res.cookie("token", token, {
@@ -221,13 +227,16 @@ async function changePasswordController(req, res) {
     return res.status(401).json({ message: "Current password is incorrect." });
   }
 
+  // JWT iat has one-second resolution. Using the *next* whole second means
+  // every token issued so far (even earlier this second) is older than the
+  // change, while this device's new token, stamped with that second, isn't.
+  const changedAt = Math.ceil(Date.now() / 1000);
   user.password = await bcrypt.hash(newPassword, 10);
-  // Whole seconds, like a JWT's iat, so the token issued below stays valid
-  user.passwordChangedAt = new Date(Math.floor(Date.now() / 1000) * 1000);
+  user.passwordChangedAt = new Date(changedAt * 1000);
   await user.save();
 
   await revokeToken(req.cookies.token);
-  startSession(res, user);
+  startSession(res, user, changedAt);
 
   res.status(200).json({ message: "Password changed. Other devices have been signed out." });
 }
