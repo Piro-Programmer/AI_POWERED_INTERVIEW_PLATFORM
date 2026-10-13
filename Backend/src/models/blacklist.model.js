@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const blacklistTokenSchema = new mongoose.Schema({
   token: {
     type: String,
-    required: [true, "token is requi to be added in blacklist"],
+    required: [true, "token is required to be added in blacklist"],
     index: true // every authenticated request looks the token up
   },
   // When the JWT itself expires. After that the token is useless anyway,
