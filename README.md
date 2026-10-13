@@ -423,6 +423,7 @@ DELETE /api/interview/:id  # delete a report and its practice attempts
 PATCH /api/interview/:id/progress   # save ticked plan tasks, body: { "completedTasks": ["0-1", "2-0"] }
 POST /api/interview/:id/practice    # review one answer, body: { kind, index, answer, durationSeconds, inputMode }
 GET  /api/interview/:id/practice    # per-question attempts, best/last score and latest feedback
+GET  /api/interview/:id/practice/progress  # averages (overall, per kind, per criterion), weakest area, 30-day trend
 ```
 
 ### Health
