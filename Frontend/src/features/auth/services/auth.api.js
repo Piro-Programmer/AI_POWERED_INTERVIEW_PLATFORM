@@ -57,3 +57,15 @@ export async function getMe(){
   }
 
 }
+
+/** Change the password; other sessions are signed out, this one stays. */
+export async function changePassword({ currentPassword, newPassword }) {
+  const response = await api.patch("/api/auth/password", { currentPassword, newPassword });
+  return response.data;
+}
+
+/** Delete the account and all its data. */
+export async function deleteAccount(password) {
+  const response = await api.delete("/api/auth/account", { data: { password } });
+  return response.data;
+}

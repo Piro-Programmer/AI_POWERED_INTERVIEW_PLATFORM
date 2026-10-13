@@ -410,6 +410,8 @@ POST /api/auth/register
 POST /api/auth/login
 GET  /api/auth/logout
 GET  /api/auth/get-me
+PATCH  /api/auth/password   # { currentPassword, newPassword }; signs out other sessions
+DELETE /api/auth/account    # { password }; deletes the account and all its data
 ```
 
 ### Interview Reports
