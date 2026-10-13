@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import AppSidebar from "../../../components/AppSidebar";
-import { getPracticeSummary, getReport, submitPracticeAnswer } from "../../ai/services/interview.api";
+import { getPracticeProgress, getPracticeSummary, getReport, submitPracticeAnswer } from "../../ai/services/interview.api";
 import { cleanTitle } from "../../history/history.utils";
 import AnswerCard from "../components/AnswerCard";
 import FeedbackPanel from "../components/FeedbackPanel";
+import ProgressPanel from "../components/ProgressPanel";
 import QuestionStrip from "../components/QuestionStrip";
-import { formatScore, isWeak, listQuestions, nextQuestion, practiceQueue } from "../practice.utils";
+import SessionSummary from "../components/SessionSummary";
+import { formatScore, isWeak, listQuestions, nextQuestion, practiceQueue, sessionSummary } from "../practice.utils";
 import "../../ai/report.scss";
 import "../../history/history.scss";
 import "../practice.scss";
@@ -31,6 +33,16 @@ const Practice = () => {
   const [feedback, setFeedback] = useState(null); // review of the answer just submitted
   const [showLast, setShowLast] = useState(false);
 
+  const [progress, setProgress] = useState(null);
+  const [session, setSession] = useState([]); // answers reviewed since the page opened
+  const [finished, setFinished] = useState(false);
+
+  // Progress is a nice-to-have: if it fails, practice still works without it.
+  const loadProgress = () =>
+    getPracticeProgress(id)
+      .then(setProgress)
+      .catch(() => {});
+
   useEffect(() => {
     let cancelled = false;
     Promise.all([getReport(id), getPracticeSummary(id)])
@@ -40,9 +52,13 @@ const Practice = () => {
         setStats(summary.questions || {});
         setReviewUsage(summary.reviewUsage || null);
       })
+
       .catch((err) => {
         if (!cancelled) setLoadError(err.response?.status === 404 ? "missing" : "failed");
       });
+    getPracticeProgress(id)
+      .then((data) => !cancelled && setProgress(data))
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -106,6 +122,11 @@ const Practice = () => {
       });
       const score = data.attempt.feedback.score;
       setFeedback(data.attempt.feedback);
+      setSession((prev) => [
+        ...prev,
+        { key: current.key, kind: current.kind, index: current.index, score, criteria: data.attempt.feedback.criteria }
+      ]);
+      loadProgress();
       setReviewUsage(data.usage);
       setStats((prev) => {
         const old = prev[current.key];
@@ -129,6 +150,26 @@ const Practice = () => {
       }
     } finally {
       setBusy(false);
+    }
+  };
+
+  const summary = useMemo(() => sessionSummary(session), [session]);
+
+  const finishSession = () => {
+    setFinished(true);
+    loadProgress();
+  };
+
+  const startNewSession = (redrill = false) => {
+    setFinished(false);
+    setSession([]);
+    setFeedback(null);
+    if (redrill) {
+      setWeakOnly(true);
+      const first = practiceQueue(questions, { weakOnly: true })[0];
+      if (first) goTo(first.key);
+    } else {
+      goNext(false);
     }
   };
 
@@ -185,71 +226,92 @@ const Practice = () => {
                 {average !== null && <> · average best <strong>{formatScore(Math.round(average * 10) / 10)}</strong></>}
                 {weakCount > 0 && <> · {weakCount} to re-drill</>}
               </p>
+              {session.length > 0 && !finished && (
+                <button type="button" className="button secondary-button practice__finish" onClick={finishSession}>
+                  Finish session ({session.length})
+                </button>
+              )}
             </header>
 
-            <div className="practice__strip">
-              <QuestionStrip questions={questions} currentKey={current.key} onSelect={goTo} />
-              <div className="history__filters" role="group" aria-label="Which questions to practise">
-                <button
-                  type="button"
-                  className={`chip ${!reDrilling ? "is-on" : ""}`}
-                  aria-pressed={!reDrilling}
-                  onClick={() => setWeakOnly(false)}
-                >
-                  All questions
-                </button>
-                <button
-                  type="button"
-                  className={`chip ${reDrilling ? "is-on" : ""}`}
-                  aria-pressed={reDrilling}
-                  disabled={weakCount === 0}
-                  onClick={() => {
-                    setWeakOnly(true);
-                    const first = practiceQueue(questions, { weakOnly: true })[0];
-                    if (first && first.key !== current.key) goTo(first.key);
-                  }}
-                >
-                  Re-drill weak ones ({weakCount})
-                </button>
-              </div>
-            </div>
-
-            <AnswerCard
-              key={`${current.key}-${round}`}
-              question={current}
-              position={position}
-              initialAnswer={draft}
-              busy={busy}
-              locked={Boolean(feedback)}
-              blockedReason={
-                outOfReviews
-                  ? `You’ve used today’s ${reviewUsage.limit} answer reviews. More at ${resetTime(reviewUsage.resetsAt)}.`
-                  : ""
-              }
-              onSubmit={submit}
-              onSkip={() => goNext(true)}
-            />
-
-            {error && <p className="error practice__error" role="alert">{error}</p>}
-
-            {feedback && (
-              <FeedbackPanel feedback={feedback} question={current} onRetry={retry} onNext={() => goNext(false)} />
+            {finished && summary && (
+              <SessionSummary
+                summary={summary}
+                weakCount={weakCount}
+                onContinue={() => startNewSession(false)}
+                onRedrill={() => startNewSession(true)}
+              />
             )}
 
-            {!feedback && current.latest && (
-              <div className="practice__last">
-                <p>
-                  Last time: <strong>{formatScore(current.lastScore)}/10</strong> · best {formatScore(current.bestScore)} ·{" "}
-                  {current.attempts} {current.attempts === 1 ? "attempt" : "attempts"}
-                  <button type="button" className="qset__all" onClick={() => setShowLast((s) => !s)}>
-                    {showLast ? "hide feedback" : "show feedback"}
-                  </button>
-                </p>
-                {showLast && (
-                  <FeedbackPanel feedback={current.latest.feedback} question={current} title="Your last attempt" />
+
+            {!finished && (
+              <>
+                <div className="practice__strip">
+                  <QuestionStrip questions={questions} currentKey={current.key} onSelect={goTo} />
+                  <div className="history__filters" role="group" aria-label="Which questions to practise">
+                    <button
+                      type="button"
+                      className={`chip ${!reDrilling ? "is-on" : ""}`}
+                      aria-pressed={!reDrilling}
+                      onClick={() => setWeakOnly(false)}
+                    >
+                      All questions
+                    </button>
+                    <button
+                      type="button"
+                      className={`chip ${reDrilling ? "is-on" : ""}`}
+                      aria-pressed={reDrilling}
+                      disabled={weakCount === 0}
+                      onClick={() => {
+                        setWeakOnly(true);
+                        const first = practiceQueue(questions, { weakOnly: true })[0];
+                        if (first && first.key !== current.key) goTo(first.key);
+                      }}
+                    >
+                      Re-drill weak ones ({weakCount})
+                    </button>
+                  </div>
+                </div>
+    
+                <AnswerCard
+                  key={`${current.key}-${round}`}
+                  question={current}
+                  position={position}
+                  initialAnswer={draft}
+                  busy={busy}
+                  locked={Boolean(feedback)}
+                  blockedReason={
+                    outOfReviews
+                      ? `You’ve used today’s ${reviewUsage.limit} answer reviews. More at ${resetTime(reviewUsage.resetsAt)}.`
+                      : ""
+                  }
+                  onSubmit={submit}
+                  onSkip={() => goNext(true)}
+                />
+    
+                {error && <p className="error practice__error" role="alert">{error}</p>}
+    
+                {feedback && (
+                  <FeedbackPanel feedback={feedback} question={current} onRetry={retry} onNext={() => goNext(false)} />
                 )}
-              </div>
+    
+                {!feedback && current.latest && (
+                  <div className="practice__last">
+                    <p>
+                      Last time: <strong>{formatScore(current.lastScore)}/10</strong> · best {formatScore(current.bestScore)} ·{" "}
+                      {current.attempts} {current.attempts === 1 ? "attempt" : "attempts"}
+                      <button type="button" className="qset__all" onClick={() => setShowLast((s) => !s)}>
+                        {showLast ? "hide feedback" : "show feedback"}
+                      </button>
+                    </p>
+                    {showLast && (
+                      <FeedbackPanel feedback={current.latest.feedback} question={current} title="Your last attempt" />
+                    )}
+                  </div>
+                )}
+              </>
             )}
+
+            <ProgressPanel progress={progress} />
           </>
         )}
       </section>

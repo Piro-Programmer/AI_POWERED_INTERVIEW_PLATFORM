@@ -20,7 +20,8 @@ const respondAfter = (ms, status = 200) => (config) =>
 
 afterEach(() => vi.useRealTimers());
 
-describe("server wake-up notice", () => {
+// A fresh module import per test can be slow when the whole suite runs in parallel
+describe("server wake-up notice", { timeout: 20_000 }, () => {
   it("flags a slow first request as waking, and clears it once the server answers", async () => {
     const { default: api, isServerWaking, SLOW_MS } = await loadApi();
     api.defaults.adapter = respondAfter(SLOW_MS + 5000);

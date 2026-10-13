@@ -22,6 +22,14 @@ test("generate a report, practise a question, then delete the report", async ({ 
   await page.getByRole("button", { name: "Get feedback" }).click();
   await expect(page.getByText(FAKE_VERDICT)).toBeVisible();
 
+  // progress shows up, and finishing the session sums it up
+  await expect(page.getByRole("heading", { name: /1 answer reviewed · average 7/ })).toBeVisible();
+  await page.getByRole("button", { name: "Finish session (1)" }).click();
+  await expect(page.getByRole("heading", { name: "You answered 1 question." })).toBeVisible();
+  await expect(page.getByText("Work on next: specificity")).toBeVisible();
+  await page.getByRole("button", { name: "Keep practising" }).click();
+  await expect(page.getByLabel("Your answer")).toBeVisible();
+
   // it's listed with the user's reports
   await page.goto("/reports");
   const row = page.getByRole("link", { name: /Backend Developer/ });

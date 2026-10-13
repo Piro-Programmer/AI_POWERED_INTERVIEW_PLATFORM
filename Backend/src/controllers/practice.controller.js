@@ -145,7 +145,86 @@ async function getPracticeSummaryController(req, res) {
   }
 }
 
+const CRITERIA = ["structure", "specificity", "relevance", "clarity"];
+const TREND_DAYS = 30;
+const round1 = (n) => (typeof n === "number" ? Math.round(n * 10) / 10 : null);
+
+/**
+ * @name getPracticeProgressController
+ * @description Practice progress for a report, computed in one aggregation:
+ *              overall and per-kind averages, average per criterion, the
+ *              weakest kind and criterion, and a daily score trend.
+ * @access private
+ */
+async function getPracticeProgressController(req, res) {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) return notFound(res);
+
+    const owned = await interviewReportModel.exists({ _id: id, user: userId });
+    if (!owned) return notFound(res);
+
+    const since = new Date(Date.now() - TREND_DAYS * 24 * 60 * 60 * 1000);
+    const criteriaAverages = Object.fromEntries(CRITERIA.map((c) => [c, { $avg: `$feedback.criteria.${c}` }]));
+
+    // matches the {user, report, ...} index prefix
+    const [result] = await practiceAttemptModel.aggregate([
+      { $match: { user: new mongoose.Types.ObjectId(userId), report: new mongoose.Types.ObjectId(id) } },
+      {
+        $facet: {
+          overall: [{ $group: { _id: null, attempts: { $sum: 1 }, average: { $avg: "$feedback.score" }, ...criteriaAverages } }],
+          byKind: [{ $group: { _id: "$kind", attempts: { $sum: 1 }, average: { $avg: "$feedback.score" } } }],
+          trend: [
+            { $match: { createdAt: { $gte: since } } },
+            {
+              $group: {
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                attempts: { $sum: 1 },
+                average: { $avg: "$feedback.score" }
+              }
+            },
+            { $sort: { _id: 1 } }
+          ]
+        }
+      }
+    ]);
+
+    const overall = result.overall[0];
+    if (!overall) {
+      return res.status(200).json({ attempts: 0, average: null, byKind: {}, criteria: {}, weakest: null, trend: [] });
+    }
+
+    const byKind = Object.fromEntries(
+      result.byKind.map((k) => [k._id, { attempts: k.attempts, average: round1(k.average) }])
+    );
+    const criteria = Object.fromEntries(
+      CRITERIA.filter((c) => typeof overall[c] === "number").map((c) => [c, round1(overall[c])])
+    );
+
+    const lowest = (entries) => entries.reduce((low, entry) => (!low || entry[1] < low[1] ? entry : low), null)?.[0] ?? null;
+    const kinds = Object.entries(byKind).map(([kind, k]) => [kind, k.average]);
+
+    return res.status(200).json({
+      attempts: overall.attempts,
+      average: round1(overall.average),
+      byKind,
+      criteria,
+      weakest: {
+        // only meaningful when both kinds have been practised
+        kind: kinds.length > 1 ? lowest(kinds) : null,
+        criterion: lowest(Object.entries(criteria))
+      },
+      trend: result.trend.map((day) => ({ day: day._id, attempts: day.attempts, average: round1(day.average) }))
+    });
+  } catch (err) {
+    console.error("getPracticeProgress failed:", err.message);
+    return res.status(500).json({ message: "Failed to load practice progress", error: err.message });
+  }
+}
+
 export default {
   submitPracticeAnswerController,
-  getPracticeSummaryController
+  getPracticeSummaryController,
+  getPracticeProgressController
 };
