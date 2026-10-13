@@ -16,6 +16,11 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true,
+  },
+
+  // Sessions (JWTs) issued before this moment are no longer accepted
+  passwordChangedAt: {
+    type: Date
   }
 });
 

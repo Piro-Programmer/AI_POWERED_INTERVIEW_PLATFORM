@@ -1,7 +1,7 @@
 import { Router } from "express";
 import authController from "../controllers/auth.controllers.js";
 import authMiddleware from "../middlewares/auth.middleware.js";
-import { loginAccountLimiter, loginIpLimiter, registerLimiter } from "../middlewares/rateLimit.middleware.js";
+import { loginAccountLimiter, loginIpLimiter, passwordCheckLimiter, registerLimiter } from "../middlewares/rateLimit.middleware.js";
 
 const authRouter = Router();
 
@@ -32,5 +32,19 @@ authRouter.get("/logout", authController.logoutUserController);
  * @access private
  */
 authRouter.get("/get-me", authMiddleware.authUser, authController.getMeController);
+
+/**
+ * @route PATCH /api/auth/password
+ * @description change password ({ currentPassword, newPassword }); signs out other sessions
+ * @access private (wrong current passwords rate limited per user)
+ */
+authRouter.patch("/password", authMiddleware.authUser, passwordCheckLimiter, authController.changePasswordController);
+
+/**
+ * @route DELETE /api/auth/account
+ * @description delete the account and all its data ({ password } to confirm)
+ * @access private (wrong passwords rate limited per user)
+ */
+authRouter.delete("/account", authMiddleware.authUser, passwordCheckLimiter, authController.deleteAccountController);
 
 export default authRouter;
