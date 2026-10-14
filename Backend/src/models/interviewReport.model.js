@@ -113,6 +113,9 @@ const interviewReportSchema = new mongoose.Schema({
 })
 
 
+// History: a user's reports, newest first
+interviewReportSchema.index({ user: 1, createdAt: -1 })
+
 const interviewReportModel = mongoose.model("InterviewReport", interviewReportSchema)
 
 export default interviewReportModel;
