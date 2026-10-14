@@ -418,7 +418,7 @@ DELETE /api/auth/account    # { password }; deletes the account and all its data
 
 ```text
 POST /api/interview        # generate a report
-GET  /api/interview        # list your reports (summaries)
+GET  /api/interview        # one page of your report summaries: ?page, limit (max 50), sort (newest|oldest|high|low), q, status
 GET  /api/interview/usage  # today's allowances: { usage, reviewUsage }, each { limit, used, remaining, resetsAt }
 GET  /api/interview/:id    # one report in full
 DELETE /api/interview/:id  # delete a report and its practice attempts

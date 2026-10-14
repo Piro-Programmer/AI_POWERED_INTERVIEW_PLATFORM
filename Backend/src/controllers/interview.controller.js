@@ -147,40 +147,126 @@ async function getUsageController(req, res) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Report history: one page of summaries, filtered, searched and sorted on the
+// server, plus stats over all of the user's reports. One aggregation.
+
+const PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 50;
+const MAX_QUERY = 100;
+const SORTS = {
+  newest: { createdAt: -1, _id: -1 },
+  oldest: { createdAt: 1, _id: 1 },
+  high: { matchScore: -1, createdAt: -1, _id: -1 },
+  low: { matchScore: 1, createdAt: -1, _id: -1 }
+};
+const STATUSES = new Set(["not-started", "in-progress", "done"]);
+
+const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const sizeOf = (path) => ({ $size: { $ifNull: [path, []] } });
+const toInt = (value, fallback, min, max) => {
+  const n = Number.parseInt(value, 10);
+  return Number.isNaN(n) ? fallback : Math.min(max, Math.max(min, n));
+};
+
 // The list only needs enough to draw a row, not every question and answer.
-function toReportSummary(report) {
-  return {
-    _id: report._id,
-    title: report.title,
-    createdAt: report.createdAt,
-    matchScore: report.matchScore,
-    jobDescription: report.jobDescription,
-    skillGaps: report.skillGaps || [],
-    technicalCount: report.technicalQuestions?.length || 0,
-    behavioralCount: report.behavioralQuestions?.length || 0,
-    planDays: report.preparationPlan?.length || 0,
-    planTaskCount: (report.preparationPlan || []).reduce((sum, day) => sum + (day.tasks?.length || 0), 0),
-    // null = report predates saved progress (ticks may still be only in the browser)
-    completedCount: Array.isArray(report.completedTasks) ? report.completedTasks.length : null
-  };
-}
+const SUMMARY = {
+  title: 1,
+  createdAt: 1,
+  matchScore: 1,
+  // first part only: the row shows one line, and search runs on the server
+  jobDescription: { $substrCP: [{ $ifNull: ["$jobDescription", ""] }, 0, 300] },
+  skillGaps: { $ifNull: ["$skillGaps", []] },
+  technicalCount: sizeOf("$technicalQuestions"),
+  behavioralCount: sizeOf("$behavioralQuestions"),
+  planDays: sizeOf("$preparationPlan"),
+  planTaskCount: {
+    $sum: { $map: { input: { $ifNull: ["$preparationPlan", []] }, as: "day", in: sizeOf("$$day.tasks") } }
+  },
+  // null = report predates saved progress (ticks may still be only in the browser)
+  completedCount: { $cond: [{ $isArray: "$completedTasks" }, { $size: "$completedTasks" }, null] }
+};
+
+const STATUS = {
+  $switch: {
+    branches: [
+      {
+        case: { $and: [{ $gt: ["$planTaskCount", 0] }, { $gte: [{ $ifNull: ["$completedCount", 0] }, "$planTaskCount"] }] },
+        then: "done"
+      },
+      { case: { $gt: [{ $ifNull: ["$completedCount", 0] }, 0] }, then: "in-progress" }
+    ],
+    default: "not-started"
+  }
+};
 
 /**
  * @name getMyReportsController
- * @description List the logged-in user's interview reports (newest first) as summaries.
+ * @description One page of the logged-in user's report summaries.
+ *   Query: page (1-based), limit (max 50), sort (newest|oldest|high|low),
+ *          q (search in title and job description), status (not-started|in-progress|done).
+ *   Returns { reports, page, pageSize, total, hasMore, stats: { count, average, best } };
+ *   total counts the filtered reports, stats cover all of them.
  * @access private
  */
 async function getMyReportsController(req, res) {
   try {
-    const reports = (await interviewReportModel
-      .find({ user: req.user.id })
-      .select("-resume -selfDescription")
-      .sort({ createdAt: -1 })
-      .lean()).map(toReportSummary);
+    const page = toInt(req.query.page, 1, 1, 10000);
+    const pageSize = toInt(req.query.limit, PAGE_SIZE, 1, MAX_PAGE_SIZE);
+    const sort = SORTS[req.query.sort] || SORTS.newest;
+    const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, MAX_QUERY) : "";
+    const status = STATUSES.has(req.query.status) ? req.query.status : null;
+
+    const filters = {};
+    if (q) {
+      const re = new RegExp(escapeRegex(q), "i");
+      filters.$or = [{ title: re }, { jobDescription: re }];
+    }
+
+    // The filtered rows, shared by the "total" and "page" branches below.
+    // Search runs on the full job description, before it's trimmed.
+    const filtered = [
+      ...(q ? [{ $match: { $or: filters.$or } }] : []),
+      { $project: SUMMARY },
+      { $addFields: { status: STATUS } },
+      ...(status ? [{ $match: { status } }] : [])
+    ];
+
+    const [result] = await interviewReportModel.aggregate([
+      { $match: { user: new mongoose.Types.ObjectId(req.user.id) } },
+      {
+        $facet: {
+          stats: [
+            {
+              $group: {
+                _id: null,
+                count: { $sum: 1 },
+                average: { $avg: "$matchScore" },
+                best: { $max: "$matchScore" }
+              }
+            }
+          ],
+          total: [...filtered, { $count: "n" }],
+          page: [...filtered, { $sort: sort }, { $skip: (page - 1) * pageSize }, { $limit: pageSize }]
+        }
+      }
+    ]);
+
+    const total = result.total[0]?.n || 0;
+    const stats = result.stats[0];
 
     return res.status(200).json({
       message: "Interview reports fetched successfully",
-      reports
+      reports: result.page,
+      page,
+      pageSize,
+      total,
+      hasMore: page * pageSize < total,
+      stats: {
+        count: stats?.count || 0,
+        average: typeof stats?.average === "number" ? Math.round(stats.average) : null,
+        best: typeof stats?.best === "number" ? stats.best : null
+      }
     });
   } catch (err) {
     console.error("getMyReports failed:", err.message);
