@@ -39,6 +39,11 @@ export const router = createBrowserRouter([
     lazy: page(() => import("./features/auth/pages/Account"), { protect: true })
   },
   {
+    // public: a report opened through its read-only share link
+    path: "/shared/:token",
+    lazy: page(() => import("./features/share/pages/SharedReport"))
+  },
+  {
     path: "/login",
     lazy: page(() => import("./features/auth/pages/Login"))
   },
