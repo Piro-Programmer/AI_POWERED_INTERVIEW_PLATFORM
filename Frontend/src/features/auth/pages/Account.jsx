@@ -1,5 +1,4 @@
 import { useContext, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import AppSidebar from "../../../components/AppSidebar";
 import { AuthContext } from "../auth.context";
 import { PASSWORD_HINT, passwordProblem } from "../password";
@@ -92,8 +91,6 @@ const ChangePassword = () => {
 };
 
 const DeleteAccount = () => {
-  const navigate = useNavigate();
-  const { setUser } = useContext(AuthContext);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -106,8 +103,9 @@ const DeleteAccount = () => {
     setError("");
     try {
       await deleteAccount(password);
-      setUser(null);
-      navigate("/", { replace: true });
+      // A full page load: nothing from the deleted account stays in memory,
+      // and the sign-in guard can't race the navigation to /login.
+      window.location.replace("/");
     } catch (err) {
       setError(errorMessage(err, "Couldn't delete your account. Please try again."));
       setBusy(false);

@@ -422,6 +422,9 @@ GET  /api/interview        # list your reports (summaries)
 GET  /api/interview/usage  # today's allowances: { usage, reviewUsage }, each { limit, used, remaining, resetsAt }
 GET  /api/interview/:id    # one report in full
 DELETE /api/interview/:id  # delete a report and its practice attempts
+POST   /api/interview/:id/share  # turn on the read-only share link, returns { shareToken }
+DELETE /api/interview/:id/share  # turn the share link off
+GET    /api/shared/:token         # public: a shared report (no owner data)
 PATCH /api/interview/:id/progress   # save ticked plan tasks, body: { "completedTasks": ["0-1", "2-0"] }
 POST /api/interview/:id/practice    # review one answer, body: { kind, index, answer, durationSeconds, inputMode }
 GET  /api/interview/:id/practice    # per-question attempts, best/last score and latest feedback

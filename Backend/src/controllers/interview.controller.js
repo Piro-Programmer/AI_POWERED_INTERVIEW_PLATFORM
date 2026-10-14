@@ -2,6 +2,7 @@
 // debug harness (it tries to read a bundled test PDF) and crashes under ESM.
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import mongoose from "mongoose";
+import { randomBytes } from "node:crypto";
 import generateInterviewReport from "../services/ai.service.js";
 import interviewReportModel from "../models/interviewReport.model.js";
 import practiceAttemptModel from "../models/practiceAttempt.model.js";
@@ -316,7 +317,108 @@ async function deleteReportController(req, res) {
   }
 }
 
+/**
+ * @name shareReportController
+ * @description Turn on the read-only share link for one of the user's reports.
+ *              Reuses the existing token if the report is already shared.
+ * @access private
+ */
+async function shareReportController(req, res) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(404).json({ message: "Report not found" });
+    }
+
+    // 24 random bytes = 192 bits: not guessable, and URL-safe as base64url
+    const report = await interviewReportModel
+      .findOneAndUpdate(
+        { _id: id, user: req.user.id, shareToken: { $exists: false } },
+        { $set: { shareToken: randomBytes(24).toString("base64url") } },
+        { new: true }
+      )
+      .select("shareToken")
+      .lean() ||
+      (await interviewReportModel.findOne({ _id: id, user: req.user.id }).select("shareToken").lean());
+
+    if (!report) {
+      return res.status(404).json({ message: "Report not found" });
+    }
+
+    return res.status(200).json({ message: "Share link is on", shareToken: report.shareToken });
+  } catch (err) {
+    console.error("shareReport failed:", err.message);
+    return res.status(500).json({ message: "Failed to share report", error: err.message });
+  }
+}
+
+/**
+ * @name unshareReportController
+ * @description Turn the share link off: the old link stops working at once.
+ * @access private
+ */
+async function unshareReportController(req, res) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(404).json({ message: "Report not found" });
+    }
+
+    const { matchedCount } = await interviewReportModel.updateOne(
+      { _id: id, user: req.user.id },
+      { $unset: { shareToken: "" } }
+    );
+    if (!matchedCount) {
+      return res.status(404).json({ message: "Report not found" });
+    }
+
+    return res.status(200).json({ message: "Share link is off" });
+  } catch (err) {
+    console.error("unshareReport failed:", err.message);
+    return res.status(500).json({ message: "Failed to stop sharing", error: err.message });
+  }
+}
+
+// What a shared link shows: the prep itself, never the owner, their profile
+// text or their plan progress.
+const SHARED_FIELDS =
+  "title jobDescription matchScore technicalQuestions behavioralQuestions skillGaps preparationPlan createdAt";
+const SHARE_TOKEN = /^[A-Za-z0-9_-]{32}$/;
+
+/**
+ * @name getSharedReportController
+ * @description A report opened through its share link (no sign-in needed).
+ * @access public
+ */
+async function getSharedReportController(req, res) {
+  try {
+    const { token } = req.params;
+
+    // Not indexed by search engines, not kept by shared caches
+    res.set("X-Robots-Tag", "noindex, nofollow");
+    res.set("Cache-Control", "no-store");
+
+    if (!SHARE_TOKEN.test(token)) {
+      return res.status(404).json({ message: "This link doesn't work any more." });
+    }
+
+    const report = await interviewReportModel.findOne({ shareToken: token }).select(SHARED_FIELDS).lean();
+    if (!report) {
+      return res.status(404).json({ message: "This link doesn't work any more." });
+    }
+
+    const { _id, ...shared } = report;
+    return res.status(200).json({ report: shared });
+  } catch (err) {
+    console.error("getSharedReport failed:", err.message);
+    return res.status(500).json({ message: "Failed to load shared report", error: err.message });
+  }
+}
+
 export default {
+  shareReportController,
+  unshareReportController,
+  getSharedReportController,
   generateInterviewReportController,
   getUsageController,
   getMyReportsController,

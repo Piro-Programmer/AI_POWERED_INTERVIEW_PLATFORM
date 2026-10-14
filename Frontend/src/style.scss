@@ -148,6 +148,16 @@ a {
   }
 }
 
+// Visible to screen readers only (e.g. labels for self-explanatory inputs)
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .page-loading {
   min-height: 100vh;
   display: grid;
