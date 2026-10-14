@@ -15,6 +15,10 @@ export const router = createBrowserRouter([
     element: <Landing />
   },
   {
+    path: "/privacy",
+    lazy: page(() => import("./pages/Privacy"))
+  },
+  {
     path: "/dashboard",
     lazy: page(() => import("./pages/Home"), { protect: true })
   },
