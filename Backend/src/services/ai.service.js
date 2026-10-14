@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import Groq from "groq-sdk";
 import { z } from "zod";
+import { takeGlobalSlot } from "./aiCapacity.service.js";
 
 const interviewReportSchema = z.object({
   matchScore: z.number().min(0).max(100),
@@ -108,6 +109,9 @@ async function generateWithRetry(prompt, schema, options, retries = 3) {
   let lastError;
 
   for (let attempt = 1; attempt <= retries; attempt++) {
+    // Every provider call, retries included, counts against the site-wide cap.
+    // When it's used up, stop: retrying would only hit the cap again.
+    await takeGlobalSlot();
     try {
       const text = await generate(prompt, jsonSchema, options);
       const validated = schema.parse(JSON.parse(text));

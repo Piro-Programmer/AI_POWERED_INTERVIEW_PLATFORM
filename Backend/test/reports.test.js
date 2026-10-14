@@ -209,3 +209,20 @@ describe("PATCH /api/interview/:id/progress", () => {
     expect((await interviewReportModel.findById(report._id).lean()).completedTasks).toEqual([]);
   });
 });
+
+describe("when the site-wide AI cap is reached", () => {
+  it("answers 503 with Retry-After and gives the user's report back", async () => {
+    const { AiCapacityError } = await import("../src/services/aiCapacity.service.js");
+    const user = await createUser();
+    generateInterviewReport.mockRejectedValueOnce(new AiCapacityError("minute", 40));
+
+    const res = await generate(user);
+    expect(res.status).toBe(503);
+    expect(res.headers["retry-after"]).toBe("40");
+    expect(res.body).toMatchObject({ code: "AI_CAPACITY", retryAfterSeconds: 40 });
+    expect(res.body.message).toMatch(/busy/);
+
+    const usage = await request(app).get("/api/interview/usage").set("Cookie", authCookie(user));
+    expect(usage.body.usage.used).toBe(0);
+  });
+});
