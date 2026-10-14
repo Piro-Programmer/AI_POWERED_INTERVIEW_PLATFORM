@@ -102,6 +102,11 @@ const interviewReportSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref:"users"
+  },
+  // Read-only share link: an unguessable token, removed to revoke the link
+  shareToken: {
+    type: String,
+    index: { unique: true, sparse: true }
   }
 }, {
   timestamps: true

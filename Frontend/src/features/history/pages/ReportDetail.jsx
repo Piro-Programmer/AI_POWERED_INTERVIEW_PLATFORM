@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import AppSidebar from "../../../components/AppSidebar";
 import ReportView from "../../ai/components/ReportView";
 import { deleteReport, getReport } from "../../ai/services/interview.api";
+import SharePanel from "../../share/components/SharePanel";
 import "../history.scss";
 
 const ReportDetail = () => {
@@ -36,6 +37,9 @@ const ReportDetail = () => {
   const practiseAgain = () =>
     navigate("/interview", { state: { jobDescription: report?.jobDescription || "" } });
 
+  const [showShare, setShowShare] = useState(false);
+  const setShareToken = (shareToken) => setReport((prev) => ({ ...prev, shareToken }));
+
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
@@ -64,6 +68,14 @@ const ReportDetail = () => {
               <button type="button" className="button secondary-button" onClick={practiseAgain}>
                 New report for this role
               </button>
+              <button
+                type="button"
+                className="button secondary-button"
+                aria-expanded={showShare}
+                onClick={() => setShowShare((s) => !s)}
+              >
+                {report.shareToken ? "Shared · manage link" : "Share"}
+              </button>
               <button type="button" className="button danger-button" onClick={remove} disabled={deleting}>
                 {deleting ? "Deleting…" : "Delete report"}
               </button>
@@ -72,6 +84,8 @@ const ReportDetail = () => {
         </div>
 
         {deleteError && <p className="detail__error" role="alert">{deleteError}</p>}
+
+        {report && showShare && <SharePanel reportId={id} token={report.shareToken} onChange={setShareToken} />}
 
         {!report && !error && <p className="page-loading page-loading--inline">opening your report…</p>}
 
