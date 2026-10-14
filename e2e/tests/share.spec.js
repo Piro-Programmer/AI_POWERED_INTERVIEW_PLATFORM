@@ -34,3 +34,29 @@ test("share a report read-only, open it signed out, then revoke the link", async
   await expect(visitorPage.getByText("This link doesn’t work any more.", { exact: false })).toBeVisible();
   await visitor.close();
 });
+
+test("Download PDF opens the print dialog with the report as the file name", async ({ page }) => {
+  await signUp(page);
+  await page.goto("/interview");
+  await page.getByLabel("The job description (required)").fill(JOB);
+  await page.getByRole("button", { name: "Generate report" }).click();
+  await page.getByRole("link", { name: /Practise these questions/ }).click();
+  await expect(page).toHaveURL(/\/practice$/);
+  await page.goto(page.url().replace(/\/practice$/, ""));
+
+  // record the call instead of opening a real dialog
+  await page.evaluate(() => {
+    window.__printedAs = null;
+    window.print = () => {
+      window.__printedAs = document.title;
+    };
+  });
+  await page.getByRole("button", { name: "Download PDF" }).click();
+  expect(await page.evaluate(() => window.__printedAs)).toMatch(/^Interview prep - Platform Engineer/);
+
+  // print mode: answers unfolded, app chrome hidden
+  await page.emulateMedia({ media: "print" });
+  await expect(page.getByText("Start from the data model, then routes, then validation (1).")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Download PDF" })).toBeHidden();
+  await expect(page.getByRole("link", { name: "Your reports" })).toBeHidden();
+});

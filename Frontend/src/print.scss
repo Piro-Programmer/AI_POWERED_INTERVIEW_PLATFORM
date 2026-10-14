@@ -1,0 +1,110 @@
+// Printing a report (and "Save as PDF") turns it into a clean prep sheet:
+// no app chrome, every answer unfolded, nothing split awkwardly across pages.
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm 14mm;
+  }
+
+  html,
+  body {
+    background: #fff;
+  }
+
+  // keep the gap highlights and severity colours
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  // app chrome and controls
+  .workspace-sidebar,
+  .detail__bar,
+  .detail__error,
+  .share-panel,
+  .shared-page__bar,
+  .wake-notice,
+  .report__jump,
+  .report__practice,
+  .qset__bar,
+  .plan-progress,
+  .print-button,
+  .fold__icon {
+    display: none !important;
+  }
+
+  .workspace-page {
+    display: block;
+    min-height: 0;
+  }
+
+  .workspace-main,
+  .shared-page__main {
+    max-width: none;
+    padding: 0;
+  }
+
+  // every answer open, without the reveal animation
+  .fold__body {
+    grid-template-rows: 1fr !important;
+    transition: none !important;
+  }
+
+  .fold__inner {
+    overflow: visible;
+  }
+
+  .fold__head {
+    padding-block: 0.6rem 0.3rem;
+  }
+
+  .fold__q {
+    background: none !important;
+  }
+
+  .fold dl {
+    padding: 0 0 0.9rem 3.5rem;
+  }
+
+  // nothing split across a page break
+  .fold,
+  .plan-day,
+  .gap-extra__item,
+  .dial,
+  figure {
+    break-inside: avoid;
+  }
+
+  h2,
+  h3,
+  .report__head {
+    break-after: avoid;
+  }
+
+  .report__section {
+    padding-top: 1.25rem;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .print-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid #999;
+    font-family: var(--mono);
+    font-size: 9pt;
+    color: #555;
+  }
+}

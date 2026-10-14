@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Wordmark from "../../../components/Wordmark";
 import ReportView from "../../ai/components/ReportView";
+import PrintButton from "../../ai/components/PrintButton";
+import { cleanTitle } from "../../history/history.utils";
 import { getSharedReport } from "../../ai/services/interview.api";
 import "../share.scss";
 
@@ -63,7 +65,14 @@ const SharedReport = () => {
           </p>
         )}
 
-        {report && <ReportView report={report} eyebrow="Shared report" />}
+        {report && (
+          <>
+            <div className="shared-page__actions">
+              <PrintButton title={cleanTitle(report.title)} />
+            </div>
+            <ReportView report={report} eyebrow="Shared report" />
+          </>
+        )}
       </section>
     </main>
   );
