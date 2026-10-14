@@ -86,6 +86,9 @@ const ReportView = ({ report, eyebrow = "Your report" }) => {
 
   return (
     <section className="report" id="report">
+      <p className="print-only print-header">
+        Interview Lab · interview prep sheet{date ? ` · ${date}` : ""}
+      </p>
       <header className="report__hero">
         <div>
           <p className="eyebrow">{eyebrow}{date ? ` · ${date}` : ""}</p>

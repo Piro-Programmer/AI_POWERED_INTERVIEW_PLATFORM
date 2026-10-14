@@ -5,6 +5,7 @@ import { router } from "./app.router"
 import { AuthProvider } from "./features/auth/auth.context.jsx"
 import ServerWakeNotice from "./components/ServerWakeNotice"
 import "./style.scss"
+import "./print.scss"
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
