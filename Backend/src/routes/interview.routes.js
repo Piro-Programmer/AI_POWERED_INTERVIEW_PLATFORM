@@ -66,6 +66,20 @@ interviewRouter.delete(
 );
 
 /**
+ * @route POST /api/interview/:id/share
+ * @description turn on the report's read-only share link; returns { shareToken }
+ * @access private
+ */
+interviewRouter.post("/:id/share", authMiddleware.authUser, interviewController.shareReportController);
+
+/**
+ * @route DELETE /api/interview/:id/share
+ * @description turn the share link off (the old link stops working)
+ * @access private
+ */
+interviewRouter.delete("/:id/share", authMiddleware.authUser, interviewController.unshareReportController);
+
+/**
  * @route PATCH /api/interview/:id/progress
  * @description save which preparation-plan tasks are ticked
  * @access private (rate limited)

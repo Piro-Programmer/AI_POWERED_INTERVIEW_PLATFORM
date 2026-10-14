@@ -58,6 +58,24 @@ export async function deleteReport(id) {
   return response.data;
 }
 
+/** Turn on a report's read-only share link; resolves to { shareToken }. */
+export async function shareReport(id) {
+  const response = await api.post(`/api/interview/${encodeURIComponent(id)}/share`);
+  return response.data;
+}
+
+/** Turn a report's share link off. */
+export async function unshareReport(id) {
+  const response = await api.delete(`/api/interview/${encodeURIComponent(id)}/share`);
+  return response.data;
+}
+
+/** A report opened through its share link (no sign-in needed). */
+export async function getSharedReport(token) {
+  const response = await api.get(`/api/shared/${encodeURIComponent(token)}`);
+  return response.data;
+}
+
 /** Fetch one full report by id. */
 export async function getReport(id) {
   const response = await api.get(`/api/interview/${encodeURIComponent(id)}`);

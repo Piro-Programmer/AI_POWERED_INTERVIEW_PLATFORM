@@ -71,7 +71,7 @@ const QuestionSet = ({ items = [], prefix, open, setOpen }) => {
   );
 };
 
-const ReportView = ({ report }) => {
+const ReportView = ({ report, eyebrow = "Your report" }) => {
   const [open, setOpen] = useState(() => new Set());
 
   const gaps = useMemo(
@@ -88,7 +88,7 @@ const ReportView = ({ report }) => {
     <section className="report" id="report">
       <header className="report__hero">
         <div>
-          <p className="eyebrow">Your report{date ? ` · ${date}` : ""}</p>
+          <p className="eyebrow">{eyebrow}{date ? ` · ${date}` : ""}</p>
           <h2>{cleanTitle(report.title)}</h2>
           <p className="report__summary">
             {technical.length} technical and {behavioral.length} behavioral questions,{" "}
