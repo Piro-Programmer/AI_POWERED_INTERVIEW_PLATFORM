@@ -1,16 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import AppSidebar from "../../../components/AppSidebar";
 import { getMyReports } from "../../ai/services/interview.api";
 import { cleanTitle, firstLine, formatDate, planDone, planStatus } from "../history.utils";
 import "../history.scss";
-
-const SORTS = {
-  newest: (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
-  oldest: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
-  high: (a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0),
-  low: (a, b) => (a.matchScore ?? 0) - (b.matchScore ?? 0),
-};
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -59,57 +52,81 @@ const SkeletonRows = () => (
   </ol>
 );
 
+const PAGE_SIZE = 20;
+
+// Account progress when the report has it; older reports fall back to this browser.
+const withProgress = (r) => {
+  const done = Math.min(r.completedCount ?? planDone(r._id), r.planTaskCount || 0);
+  return { ...r, done, status: planStatus(done, r.planTaskCount || 0) };
+};
+
+/** `value`, but only once it has stopped changing for `ms`. */
+const useDebounced = (value, ms) => {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), ms);
+    return () => clearTimeout(timer);
+  }, [value, ms]);
+  return debounced;
+};
+
 const Reports = () => {
-  const [reports, setReports] = useState(null);
+  const [items, setItems] = useState(null); // null until the first page arrives
+  const [stats, setStats] = useState(null);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("newest");
   const [filter, setFilter] = useState("all");
-
   const [attempt, setAttempt] = useState(0);
 
+  const q = useDebounced(query.trim(), 300);
+  const latest = useRef(0); // only the newest request may update the list
+
+  const fetchPage = useCallback(
+    async (pageToLoad) => {
+      const request = ++latest.current;
+      setLoading(true);
+      setError("");
+      try {
+        const data = await getMyReports({
+          page: pageToLoad,
+          limit: PAGE_SIZE,
+          sort,
+          q: q || undefined,
+          status: filter === "all" ? undefined : filter
+        });
+        if (request !== latest.current) return;
+        const rows = (data.reports || []).map(withProgress);
+        setItems((prev) => (pageToLoad === 1 || !prev ? rows : [...prev, ...rows]));
+        setStats(data.stats || null);
+        setTotal(data.total ?? rows.length);
+        setPage(pageToLoad);
+        setHasMore(Boolean(data.hasMore));
+      } catch (err) {
+        if (request === latest.current) setError(err.response?.data?.message || "We couldn't load your reports.");
+      } finally {
+        if (request === latest.current) setLoading(false);
+      }
+    },
+    [sort, q, filter]
+  );
+
+  // A new search, sort or filter starts again from page 1
   useEffect(() => {
-    let cancelled = false;
-    getMyReports()
-      .then((data) => {
-        if (cancelled) return;
-        setReports(
-          (data.reports || []).map((r) => {
-            // Account progress when the report has it; older reports fall back to this browser
-            const done = Math.min(r.completedCount ?? planDone(r._id), r.planTaskCount || 0);
-            return { ...r, done, status: planStatus(done, r.planTaskCount || 0) };
-          })
-        );
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err.response?.data?.message || "We couldn't load your reports.");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [attempt]);
+    fetchPage(1);
+  }, [fetchPage, attempt]);
 
   const load = () => {
-    setError("");
-    setReports(null);
+    setItems(null);
     setAttempt((n) => n + 1);
   };
 
-  const visible = useMemo(() => {
-    if (!reports) return [];
-    const q = query.trim().toLowerCase();
-    return reports
-      .filter((r) => filter === "all" || r.status === filter)
-      .filter((r) => !q || `${r.title} ${r.jobDescription}`.toLowerCase().includes(q))
-      .sort(SORTS[sort]);
-  }, [reports, query, sort, filter]);
-
-  const stats = useMemo(() => {
-    if (!reports?.length) return null;
-    const scores = reports.map((r) => r.matchScore).filter((s) => typeof s === "number");
-    const average = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
-    return { count: reports.length, average, best: scores.length ? Math.max(...scores) : null };
-  }, [reports]);
+  const hasAny = (stats?.count || 0) > 0;
+  const visible = items || [];
 
   return (
     <main className="workspace-page">
@@ -120,7 +137,7 @@ const Reports = () => {
           <div>
             <p className="eyebrow">Your reports</p>
             <h2>Every job you’ve prepped for.</h2>
-            {stats && (
+            {hasAny && (
               <p className="history__stats">
                 {stats.count} {stats.count === 1 ? "report" : "reports"}
                 {stats.average !== null && <> · average match <strong>{stats.average}</strong></>}
@@ -131,7 +148,7 @@ const Reports = () => {
           <Link className="button primary-button" to="/interview">New report</Link>
         </header>
 
-        {reports?.length > 0 && (
+        {hasAny && (
           <div className="history__tools">
             <label className="history__search">
               <span className="eyebrow">Search</span>
@@ -176,16 +193,16 @@ const Reports = () => {
           </div>
         )}
 
-        {!error && reports === null && <SkeletonRows />}
+        {!error && items === null && <SkeletonRows />}
 
-        {reports?.length === 0 && (
+        {stats && !hasAny && (
           <div className="history__empty">
             <p className="hand">Nothing here yet. Your first report is one job description away.</p>
             <Link className="button primary-button" to="/interview">Create your first report</Link>
           </div>
         )}
 
-        {reports?.length > 0 && visible.length === 0 && (
+        {hasAny && items !== null && !loading && visible.length === 0 && (
           <p className="history__none">No reports match that. Try a different search or filter.</p>
         )}
 
@@ -228,6 +245,19 @@ const Reports = () => {
               );
             })}
           </ol>
+        )}
+
+        {items !== null && visible.length > 0 && (
+          <div className="history__more">
+            <p>
+              Showing {visible.length} of {total}
+            </p>
+            {hasMore && (
+              <button type="button" className="button secondary-button" onClick={() => fetchPage(page + 1)} disabled={loading}>
+                {loading ? "Loading…" : "Load more"}
+              </button>
+            )}
+          </div>
         )}
       </section>
     </main>

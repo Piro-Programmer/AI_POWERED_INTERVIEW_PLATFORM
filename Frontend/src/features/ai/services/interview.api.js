@@ -14,9 +14,13 @@ export async function generateReport({ resume, selfDescription, jobDescription }
   return response.data;
 }
 
-/** Fetch summaries of the logged-in user's past interview reports, newest first. */
-export async function getMyReports() {
-  const response = await api.get("/api/interview");
+/**
+ * One page of the user's report summaries.
+ * params: { page, limit, sort: "newest"|"oldest"|"high"|"low", q, status }
+ * Resolves to { reports, page, pageSize, total, hasMore, stats: { count, average, best } }.
+ */
+export async function getMyReports(params = {}) {
+  const response = await api.get("/api/interview", { params });
   return response.data;
 }
 
