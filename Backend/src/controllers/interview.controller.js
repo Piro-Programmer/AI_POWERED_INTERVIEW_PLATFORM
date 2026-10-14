@@ -7,6 +7,7 @@ import generateInterviewReport from "../services/ai.service.js";
 import interviewReportModel from "../models/interviewReport.model.js";
 import practiceAttemptModel from "../models/practiceAttempt.model.js";
 import { getUsage, refundGeneration, reserveGeneration } from "../services/aiQuota.service.js";
+import { AiCapacityError } from "../services/aiCapacity.service.js";
 
 function createReportTitle(jobDescription) {
   const normalizedDescription = jobDescription
@@ -118,6 +119,10 @@ async function generateInterviewReportController(req, res) {
       await refundGeneration(userId, reservation.day).catch((refundErr) =>
         console.error("refundGeneration failed:", refundErr.message)
       );
+    }
+    if (err instanceof AiCapacityError) {
+      res.set("Retry-After", String(err.retryAfterSeconds));
+      return res.status(503).json({ code: err.code, message: err.message, retryAfterSeconds: err.retryAfterSeconds });
     }
     console.error("generateInterviewReport failed:", err.message);
     return res.status(500).json({

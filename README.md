@@ -74,6 +74,7 @@ Every response is validated against a strict schema before it reaches the user, 
 **Limits and security**
 - Daily AI allowances per user, shown in the UI: 10 reports and 30 answer reviews a day by default
 - The allowance is reserved atomically in MongoDB, so parallel requests can't overshoot it, and a failed AI call gives it back
+- Site-wide caps on AI provider usage, in requests **and tokens** per minute and per day (retries included), keep the whole site under the provider's rate limits; over a cap, or if the provider answers 429, users get "busy, try again" and their allowance back
 - One report generation at a time per user, plus a short burst limit
 - Failed sign-ins are rate limited per account and per network; sign-ups per network
 - Input caps (job description, profile, resume text, request size) and PDF-only uploads up to 3 MB
@@ -303,6 +304,7 @@ push to main ─► detect changes ─► tests (as above) ─► deploy backend
 - auth: register/login validation, NoSQL-injection inputs rejected, per-account lockout after 10 failed sign-ins, logout blacklisting
 - reports: generation, input caps, PDF type/size, summaries without resume text, one generation at a time, **another user's report is always a 404**
 - quota: **20 parallel reservations against real MongoDB never exceed a limit of 10**, refunds, separate report/review allowances, burst limit
+- site-wide caps: with a limit of 2 requests a minute, **exactly 2 of 5 simultaneous calls get through**; a second report doesn't fit in 7,000 tokens/min; real token counts replace estimates; retries count and stop at the cap; a provider 429 stops retries at once; 503 + Retry-After with the user's allowance refunded
 - practice: answer review, validation, ownership, refunds, daily limit, best/last score summaries
 - app-wide: JSON 404/400/413 errors, security headers, CORS
 

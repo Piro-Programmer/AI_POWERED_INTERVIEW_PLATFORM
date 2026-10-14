@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import Groq from "groq-sdk";
 import { z } from "zod";
+import { AiCapacityError, settleGlobalSlot, takeGlobalSlot } from "./aiCapacity.service.js";
 
 const interviewReportSchema = z.object({
   matchScore: z.number().min(0).max(100),
@@ -81,7 +82,7 @@ async function generateWithGroq(prompt, jsonSchema, { system, temperature }) {
     temperature
   });
 
-  return response.choices[0]?.message?.content;
+  return { text: response.choices[0]?.message?.content, tokens: response.usage?.total_tokens };
 }
 
 async function generateWithGemini(prompt, jsonSchema, { system, temperature }) {
@@ -98,8 +99,21 @@ async function generateWithGemini(prompt, jsonSchema, { system, temperature }) {
     }
   });
 
-  return response.text;
+  return { text: response.text, tokens: response.usageMetadata?.totalTokenCount };
 }
+
+// Rough token estimate before the call (about 4 characters per token for the
+// prompt, plus the expected answer); corrected with the real count afterwards.
+const estimateTokens = (prompt, jsonSchema, { system, expectedOutputTokens }) =>
+  Math.ceil((prompt.length + JSON.stringify(jsonSchema).length + system.length) / 4) + expectedOutputTokens;
+
+// The provider's own rate limit (HTTP 429): retrying right away would only be
+// refused again, so stop and tell the user when to come back.
+const providerRateLimit = (error) => {
+  if (error?.status !== 429) return null;
+  const seconds = Number.parseInt(error.headers?.get?.("retry-after") ?? error.headers?.["retry-after"], 10);
+  return new AiCapacityError("minute", Number.isInteger(seconds) && seconds > 0 ? seconds : 60);
+};
 
 /** Ask the model for JSON matching `schema`, validate it, retry on failure. */
 async function generateWithRetry(prompt, schema, options, retries = 3) {
@@ -107,13 +121,22 @@ async function generateWithRetry(prompt, schema, options, retries = 3) {
   const jsonSchema = JSON_SCHEMAS.get(schema);
   let lastError;
 
+  const estimate = estimateTokens(prompt, jsonSchema, options);
+
   for (let attempt = 1; attempt <= retries; attempt++) {
+    // Every provider call, retries included, counts against the site-wide
+    // request and token caps. When they're used up, stop: retrying would only
+    // hit them again.
+    const slot = await takeGlobalSlot(estimate);
     try {
-      const text = await generate(prompt, jsonSchema, options);
+      const { text, tokens } = await generate(prompt, jsonSchema, options);
+      await settleGlobalSlot(slot, tokens).catch((err) => console.error("settleGlobalSlot failed:", err.message));
       const validated = schema.parse(JSON.parse(text));
 
       return validated;
     } catch (error) {
+      const rateLimited = providerRateLimit(error);
+      if (rateLimited) throw rateLimited;
       lastError = error;
       console.log(`AI attempt ${attempt}/${retries} (${provider}) failed: ${error.message}`);
     }
@@ -149,7 +172,8 @@ Job Description: ${jobDescription}
 
   const result = await generateWithRetry(prompt, interviewReportSchema, {
     system: "You are an expert technical interviewer.",
-    temperature: 0.5
+    temperature: 0.5,
+    expectedOutputTokens: 2500 // 8 questions with answers, gaps and a 5-day plan
   });
 
   return result;
@@ -199,7 +223,8 @@ Write directly to the candidate ("you"). Return ONLY valid JSON.
 
   return generateWithRetry(prompt, answerFeedbackSchema, {
     system: "You are a fair, specific interview coach.",
-    temperature: 0.2
+    temperature: 0.2,
+    expectedOutputTokens: 800 // scores, short lists and an outline
   });
 }
 

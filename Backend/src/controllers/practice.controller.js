@@ -3,6 +3,7 @@ import interviewReportModel from "../models/interviewReport.model.js";
 import practiceAttemptModel from "../models/practiceAttempt.model.js";
 import { evaluateAnswer } from "../services/ai.service.js";
 import { getUsage, refundGeneration, reserveGeneration } from "../services/aiQuota.service.js";
+import { AiCapacityError } from "../services/aiCapacity.service.js";
 
 const MIN_ANSWER = 20;
 const MAX_ANSWER = 4000;
@@ -99,6 +100,10 @@ async function submitPracticeAnswerController(req, res) {
       await refundGeneration(userId, reservation.day, "review").catch((refundErr) =>
         console.error("refundGeneration failed:", refundErr.message)
       );
+    }
+    if (err instanceof AiCapacityError) {
+      res.set("Retry-After", String(err.retryAfterSeconds));
+      return res.status(503).json({ code: err.code, message: err.message, retryAfterSeconds: err.retryAfterSeconds });
     }
     console.error("submitPracticeAnswer failed:", err.message);
     return res.status(500).json({ message: "Couldn't review that answer. Please try again.", error: err.message });

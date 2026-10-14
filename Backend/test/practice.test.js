@@ -162,3 +162,21 @@ describe("GET /api/interview/:id/practice/progress", () => {
     expect((await progress(user, "nope")).status).toBe(404);
   });
 });
+
+describe("when the site-wide AI cap is reached", () => {
+  it("answers 503 with Retry-After and gives the review back", async () => {
+    const { AiCapacityError } = await import("../src/services/aiCapacity.service.js");
+    const user = await createUser();
+    const report = await createReport(user);
+    evaluateAnswer.mockRejectedValueOnce(new AiCapacityError("day", 3600));
+
+    const res = await submit(user, report._id);
+    expect(res.status).toBe(503);
+    expect(res.headers["retry-after"]).toBe("3600");
+    expect(res.body.message).toMatch(/today's AI capacity/);
+    expect(await practiceAttemptModel.countDocuments()).toBe(0);
+
+    const usage = await request(app).get("/api/interview/usage").set("Cookie", authCookie(user));
+    expect(usage.body.reviewUsage.used).toBe(0);
+  });
+});
