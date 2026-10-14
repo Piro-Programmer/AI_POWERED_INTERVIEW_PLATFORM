@@ -108,6 +108,9 @@ const Register = () => {
         <p className="auth-switch">
           Already have one? <Link className="text-link" to="/login">Sign in</Link>
         </p>
+        <p className="auth-switch auth-switch--small">
+          What we store and how to delete it: <Link className="text-link" to="/privacy">privacy</Link>.
+        </p>
       </section>
     </main>
   );

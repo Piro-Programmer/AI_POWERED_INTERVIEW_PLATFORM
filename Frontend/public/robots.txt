@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+# private or per-user pages
+Disallow: /shared/
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /interview
+Disallow: /reports
+Disallow: /account
+
+Sitemap: https://ai-powered-interview-platform-hywork.vercel.app/sitemap.xml
