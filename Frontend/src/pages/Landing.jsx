@@ -215,6 +215,7 @@ const Landing = () => {
         <Wordmark />
         <p>Built with React, Express, MongoDB and Groq.</p>
         <a className="text-link" href={REPO_URL} target="_blank" rel="noreferrer">Source on GitHub</a>
+        <Link className="text-link" to="/privacy">Privacy</Link>
       </footer>
     </div>
   );
