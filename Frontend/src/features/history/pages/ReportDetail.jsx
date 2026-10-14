@@ -4,6 +4,8 @@ import AppSidebar from "../../../components/AppSidebar";
 import ReportView from "../../ai/components/ReportView";
 import { deleteReport, getReport } from "../../ai/services/interview.api";
 import SharePanel from "../../share/components/SharePanel";
+import PrintButton from "../../ai/components/PrintButton";
+import { cleanTitle } from "../history.utils";
 import "../history.scss";
 
 const ReportDetail = () => {
@@ -68,6 +70,7 @@ const ReportDetail = () => {
               <button type="button" className="button secondary-button" onClick={practiseAgain}>
                 New report for this role
               </button>
+              <PrintButton title={cleanTitle(report.title)} />
               <button
                 type="button"
                 className="button secondary-button"
