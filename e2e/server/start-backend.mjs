@@ -1,6 +1,7 @@
 // The real backend (Backend/server.js) on a throwaway in-memory MongoDB, with
 // the AI service swapped for a fake. Playwright starts this before the tests.
-import { register } from "node:module";
+import { createRequire, register } from "node:module";
+import { E2E_ADMIN } from "./fixtures.js";
 import { MongoMemoryServer } from "mongodb-memory-server";
 
 register("./hooks.mjs", import.meta.url);
@@ -26,3 +27,15 @@ process.on("SIGINT", stop);
 process.on("SIGTERM", stop);
 
 await import("../../Backend/server.js");
+
+// One admin for the admin-page tests. The app can't make admins (by design),
+// so it goes straight into this throwaway database, as you would in Atlas.
+const require = createRequire(new URL("../../Backend/package.json", import.meta.url));
+const bcrypt = require("bcryptjs");
+const { default: userModel } = await import("../../Backend/src/models/user.model.js");
+await userModel.create({
+  username: "e2e-admin",
+  email: E2E_ADMIN.email,
+  password: await bcrypt.hash(E2E_ADMIN.password, 4),
+  role: "admin"
+});

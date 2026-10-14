@@ -16,6 +16,7 @@ const AppSidebar = () => {
         <NavLink className={navClass} to="/interview">New report</NavLink>
         <NavLink className={navClass} to="/reports">Your reports</NavLink>
         <NavLink className={navClass} to="/account">Account</NavLink>
+        {user?.role === "admin" && <NavLink className={navClass} to="/admin">Admin</NavLink>}
       </nav>
       <div className="sidebar-profile">
         <span className="avatar">{user?.username?.slice(0, 1)?.toUpperCase() || "U"}</span>

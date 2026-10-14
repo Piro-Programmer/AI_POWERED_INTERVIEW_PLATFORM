@@ -3,9 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { randomUUID } from "node:crypto";
 import tokenBlacklistModel from "../models/blacklist.model.js";
-import interviewReportModel from "../models/interviewReport.model.js";
-import practiceAttemptModel from "../models/practiceAttempt.model.js";
-import aiUsageModel from "../models/aiUsage.model.js";
+import { deleteUserAndData } from "../services/userData.service.js";
 
 // In production the cookie is only sent over HTTPS. SameSite defaults to "lax",
 // which works when the frontend proxies /api to this server (same site).
@@ -110,7 +108,8 @@ async function registerUserController(req, res) {
     user: {
       id: user._id,
       username: user.username,
-      email: user.email
+      email: user.email,
+      role: user.role || "user"
     }
   });
 }
@@ -152,7 +151,8 @@ async function loginUserController(req, res) {
     user: {
       id: user._id,
       username: user.username,
-      email: user.email
+      email: user.email,
+      role: user.role || "user"
     }
   });
 }
@@ -191,7 +191,8 @@ async function getMeController(req, res) {
     user: {
       id: user._id,
       username: user.username,
-      email: user.email
+      email: user.email,
+      role: user.role || "user"
     }
   });
 }
@@ -263,16 +264,7 @@ async function deleteAccountController(req, res) {
     return res.status(401).json({ message: "Password is incorrect." });
   }
 
-  // Data first, the user last: if anything fails, the account still exists
-  // and deleting again finishes the job.
-  await Promise.all([
-    interviewReportModel.deleteMany({ user: user._id }),
-    practiceAttemptModel.deleteMany({ user: user._id }),
-    aiUsageModel.deleteMany({ user: user._id })
-  ]);
-  await userModel.deleteOne({ _id: user._id });
-
-  // Other sessions stop working too: authUser rejects tokens of missing users
+  await deleteUserAndData(user._id);
   await revokeToken(req.cookies.token);
   res.clearCookie("token", cookieOptions);
 

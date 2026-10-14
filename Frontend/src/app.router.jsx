@@ -43,6 +43,11 @@ export const router = createBrowserRouter([
     lazy: page(() => import("./features/auth/pages/Account"), { protect: true })
   },
   {
+    // signed in; the page and every /api/admin call also check the admin role
+    path: "/admin",
+    lazy: page(() => import("./features/admin/pages/Admin"), { protect: true })
+  },
+  {
     // public: a report opened through its read-only share link
     path: "/shared/:token",
     lazy: page(() => import("./features/share/pages/SharedReport"))

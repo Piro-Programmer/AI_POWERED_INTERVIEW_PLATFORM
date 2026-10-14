@@ -74,6 +74,15 @@ const Privacy = () => (
       </section>
 
       <section>
+        <h2>The site admin</h2>
+        <p>
+          The person running the site can see your username, email address, when you joined, and how many reports
+          and practice answers you have, so they can remove spam or abuse. Not the content of your reports or
+          answers. Deleting an account from the admin page is logged.
+        </p>
+      </section>
+
+      <section>
         <h2>Share links</h2>
         <p>
           If you share a report, anyone with the link can read that report: the job description, questions, gaps

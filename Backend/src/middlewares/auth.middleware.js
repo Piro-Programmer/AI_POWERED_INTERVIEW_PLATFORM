@@ -25,7 +25,7 @@ async function authUser(req, res, next) {
   // still exist with no password change since the token was issued?
   const [isTokenBlacklisted, user] = await Promise.all([
     tokenBlacklistModel.exists({ token }),
-    userModel.findById(decoded.id).select("passwordChangedAt").lean()
+    userModel.findById(decoded.id).select("passwordChangedAt role").lean()
   ]);
 
   if (isTokenBlacklisted) {
@@ -41,8 +41,17 @@ async function authUser(req, res, next) {
     });
   }
 
-  req.user = decoded;
+  // role from the database, so making someone admin (or not) applies at once
+  req.user = { ...decoded, role: user.role || "user" };
   next();
 }
 
-export default { authUser };
+/** After authUser: only admins get through; everyone else gets 403. */
+function requireAdmin(req, res, next) {
+  if (req.user?.role !== "admin") {
+    return res.status(403).json({ message: "Admins only." });
+  }
+  next();
+}
+
+export default { authUser, requireAdmin };
