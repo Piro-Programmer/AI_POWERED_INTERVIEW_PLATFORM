@@ -10,7 +10,14 @@ test("generate a report, practise a question, then delete the report", async ({ 
   await page.goto("/interview");
   await page.getByLabel("The job description (required)").fill(JOB);
   await page.getByRole("button", { name: "Generate report" }).click();
+
+  // live progress: parts tick off while the AI is still writing
+  const progress = page.getByRole("region", { name: "Report progress" });
+  await expect(progress.getByText(/[1-4] of 5 parts written/)).toBeVisible();
+  await expect(progress.getByText("Match score (done)")).toBeAttached();
+
   await expect(page.getByRole("heading", { name: /Backend Developer/ })).toBeVisible();
+  await expect(progress).toHaveCount(0); // replaced by the saved report
   await expect(page.getByText("How would you design feature 1 of an Express API?")).toBeVisible();
 
   // practise one question
