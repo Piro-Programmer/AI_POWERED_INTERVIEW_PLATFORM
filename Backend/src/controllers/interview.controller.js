@@ -41,10 +41,39 @@ const MAX_RESUME_TEXT = 20000;
 const generating = new Set();
 
 /**
+ * Server-sent events on an already-open response. Proxies may close a quiet
+ * connection, so a comment line goes out every 15 seconds while waiting.
+ */
+function openEventStream(res) {
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no" // ask nginx-style proxies not to buffer
+  });
+  res.flushHeaders?.();
+  const heartbeat = setInterval(() => res.write(": keep-alive\n\n"), 15000);
+  return {
+    send(event, data) {
+      if (!res.writableEnded) res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    },
+    end() {
+      clearInterval(heartbeat);
+      if (!res.writableEnded) res.end();
+    }
+  };
+}
+
+/**
  * @name generateInterviewReportController
  * @description Parse the uploaded resume PDF, generate a structured interview
  *              report via the AI service, persist it, and return it.
  *              Each successful generation uses one of the user's daily allowance.
+ *              With "Accept: text/event-stream" the answer is a stream of
+ *              events instead: start, section (each finished part, as a
+ *              preview), retry, then done { interviewReport, usage } or
+ *              error { status, message, ... }. Problems found before the AI
+ *              starts (bad input, limits) are plain JSON errors either way.
  * @access private
  */
 async function generateInterviewReportController(req, res) {
@@ -74,6 +103,7 @@ async function generateInterviewReportController(req, res) {
 
   generating.add(userId);
   let reservation = null;
+  let stream = null;
 
   try {
     reservation = await reserveGeneration(userId);
@@ -93,10 +123,24 @@ async function generateInterviewReportController(req, res) {
       resumeText = data.text.slice(0, MAX_RESUME_TEXT);
     }
 
+    // From here on, a streaming client hears about progress as it happens.
+    // If the client goes away, the report is still finished and saved.
+    if (req.get("accept")?.includes("text/event-stream")) {
+      stream = openEventStream(res);
+      stream.send("start", { usage: reservation.usage });
+    }
+    const onProgress = stream
+      ? (event) =>
+          event.type === "attempt"
+            ? event.attempt > 1 && stream.send("retry", { attempt: event.attempt })
+            : stream.send("section", { key: event.key, value: event.value })
+      : undefined;
+
     const reportByAi = await generateInterviewReport({
       resume: resumeText,
       selfDescription,
-      jobDescription
+      jobDescription,
+      onProgress
     });
 
     const interviewReport = await interviewReportModel.create({
@@ -108,11 +152,12 @@ async function generateInterviewReportController(req, res) {
       ...reportByAi
     });
 
-    return res.status(201).json({
-      message: "Interview report generated successfully",
-      interviewReport,
-      usage: reservation.usage
-    });
+    const body = { message: "Interview report generated successfully", interviewReport, usage: reservation.usage };
+    if (stream) {
+      stream.send("done", body);
+      return;
+    }
+    return res.status(201).json(body);
   } catch (err) {
     // A failed generation shouldn't cost the user a report
     if (reservation) {
@@ -120,17 +165,25 @@ async function generateInterviewReportController(req, res) {
         console.error("refundGeneration failed:", refundErr.message)
       );
     }
+    let status = 500;
+    let body = { message: "Failed to generate interview report", error: err.message };
     if (err instanceof AiCapacityError) {
-      res.set("Retry-After", String(err.retryAfterSeconds));
-      return res.status(503).json({ code: err.code, message: err.message, retryAfterSeconds: err.retryAfterSeconds });
+      status = 503;
+      body = { code: err.code, message: err.message, retryAfterSeconds: err.retryAfterSeconds };
+    } else {
+      console.error("generateInterviewReport failed:", err.message);
     }
-    console.error("generateInterviewReport failed:", err.message);
-    return res.status(500).json({
-      message: "Failed to generate interview report",
-      error: err.message
-    });
+
+    // the stream is already open with 200, so the error travels as an event
+    if (stream) {
+      stream.send("error", { status, ...body });
+      return;
+    }
+    if (status === 503) res.set("Retry-After", String(body.retryAfterSeconds));
+    return res.status(status).json(body);
   } finally {
     generating.delete(userId);
+    stream?.end();
   }
 }
 
