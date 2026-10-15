@@ -69,3 +69,15 @@ export async function deleteAccount(password) {
   const response = await api.delete("/api/auth/account", { data: { password } });
   return response.data;
 }
+
+/** Ask for a password-reset email. The answer is the same whether or not the account exists. */
+export async function forgotPassword(email) {
+  const response = await api.post("/api/auth/forgot-password", { email });
+  return response.data;
+}
+
+/** Set a new password with the token from the reset email. */
+export async function resetPassword({ token, password }) {
+  const response = await api.post("/api/auth/reset-password", { token, password });
+  return response.data;
+}
