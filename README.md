@@ -433,6 +433,23 @@ GET  /api/interview/:id/practice    # per-question attempts, best/last score and
 GET  /api/interview/:id/practice/progress  # averages (overall, per kind, per criterion), weakest area, 30-day trend
 ```
 
+### Admin (role "admin" only)
+
+```text
+GET    /api/admin/stats      # totals, last 7 days, today's site-wide AI usage
+GET    /api/admin/users      # users with report/practice counts: ?page, q
+DELETE /api/admin/users/:id  # delete a user and all their data (not yourself, not an admin); audited
+GET    /api/admin/audit      # latest admin actions
+```
+
+Nobody can become admin through the app. Set it once in MongoDB (Atlas → Browse Collections → `users`, or `mongosh`):
+
+```js
+db.users.updateOne({ email: "you@example.com" }, { $set: { role: "admin" } })
+```
+
+The role is read from the database on every request, so it applies to an existing session immediately; an **Admin** link then appears in the sidebar.
+
 ### Health
 
 ```text

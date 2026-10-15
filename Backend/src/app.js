@@ -4,6 +4,7 @@ import multer from "multer";
 import authRouter from "./routes/auth.routes.js";
 import interviewRouter from "./routes/interview.routes.js";
 import sharedRouter from "./routes/shared.routes.js";
+import adminRouter from "./routes/admin.routes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { apiLimiter } from "./middlewares/rateLimit.middleware.js";
@@ -53,6 +54,7 @@ app.use("/api", apiLimiter);
 app.use("/api/auth", authRouter);
 app.use("/api/interview", interviewRouter);
 app.use("/api/shared", sharedRouter);
+app.use("/api/admin", adminRouter);
 
 app.use("/api", (req, res) => {
   res.status(404).json({ message: "Not found" });

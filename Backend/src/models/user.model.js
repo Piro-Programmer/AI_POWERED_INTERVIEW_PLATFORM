@@ -21,6 +21,14 @@ const userSchema = new mongoose.Schema({
   // Sessions (JWTs) issued before this moment are no longer accepted
   passwordChangedAt: {
     type: Date
+  },
+
+  // "admin" is never set through the API: set it by hand in the database,
+  // e.g. db.users.updateOne({ email: "you@example.com" }, { $set: { role: "admin" } })
+  role: {
+    type: String,
+    enum: ["user", "admin"],
+    default: "user"
   }
 });
 
