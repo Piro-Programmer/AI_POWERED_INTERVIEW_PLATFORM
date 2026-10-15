@@ -2,6 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import Groq from "groq-sdk";
 import { z } from "zod";
 import { AiCapacityError, settleGlobalSlot, takeGlobalSlot } from "./aiCapacity.service.js";
+import { completedSections } from "./jsonSections.js";
 
 const interviewReportSchema = z.object({
   matchScore: z.number().min(0).max(100),
@@ -69,10 +70,10 @@ const provider = process.env.GROQ_API_KEY ? "groq" : "gemini";
 let groqClient;
 let geminiClient;
 
-async function generateWithGroq(prompt, jsonSchema, { system, temperature }) {
+async function generateWithGroq(prompt, jsonSchema, { system, temperature, onText }) {
   groqClient ??= new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-  const response = await groqClient.chat.completions.create({
+  const request = {
     model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
     messages: [
       { role: "system", content: `${system} Reply with a single valid JSON object only.` },
@@ -80,15 +81,33 @@ async function generateWithGroq(prompt, jsonSchema, { system, temperature }) {
     ],
     response_format: { type: "json_object" },
     temperature
-  });
+  };
 
-  return { text: response.choices[0]?.message?.content, tokens: response.usage?.total_tokens };
+  if (!onText) {
+    const response = await groqClient.chat.completions.create(request);
+    return { text: response.choices[0]?.message?.content, tokens: response.usage?.total_tokens };
+  }
+
+  // Streaming: hand over the text so far after every chunk. Groq reports the
+  // token count in the last chunk (x_groq.usage).
+  const stream = await groqClient.chat.completions.create({ ...request, stream: true });
+  let text = "";
+  let tokens;
+  for await (const chunk of stream) {
+    const piece = chunk.choices?.[0]?.delta?.content;
+    if (piece) {
+      text += piece;
+      onText(text);
+    }
+    tokens = chunk.x_groq?.usage?.total_tokens ?? chunk.usage?.total_tokens ?? tokens;
+  }
+  return { text, tokens };
 }
 
-async function generateWithGemini(prompt, jsonSchema, { system, temperature }) {
+async function generateWithGemini(prompt, jsonSchema, { system, temperature, onText }) {
   geminiClient ??= new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY });
 
-  const response = await geminiClient.models.generateContent({
+  const request = {
     model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
     contents: prompt,
     config: {
@@ -97,9 +116,24 @@ async function generateWithGemini(prompt, jsonSchema, { system, temperature }) {
       responseMimeType: "application/json",
       responseJsonSchema: jsonSchema
     }
-  });
+  };
 
-  return { text: response.text, tokens: response.usageMetadata?.totalTokenCount };
+  if (!onText) {
+    const response = await geminiClient.models.generateContent(request);
+    return { text: response.text, tokens: response.usageMetadata?.totalTokenCount };
+  }
+
+  const stream = await geminiClient.models.generateContentStream(request);
+  let text = "";
+  let tokens;
+  for await (const chunk of stream) {
+    if (chunk.text) {
+      text += chunk.text;
+      onText(text);
+    }
+    tokens = chunk.usageMetadata?.totalTokenCount ?? tokens;
+  }
+  return { text, tokens };
 }
 
 // Rough token estimate before the call (about 4 characters per token for the
@@ -115,10 +149,17 @@ const providerRateLimit = (error) => {
   return new AiCapacityError("minute", Number.isInteger(seconds) && seconds > 0 ? seconds : 60);
 };
 
-/** Ask the model for JSON matching `schema`, validate it, retry on failure. */
-async function generateWithRetry(prompt, schema, options, retries = 3) {
+/**
+ * Ask the model for JSON matching `schema`, validate it, retry on failure.
+ * With `onProgress`, the answer is streamed and the caller hears about it:
+ *   { type: "attempt", attempt }     a call is starting (a retry starts over)
+ *   { type: "section", key, value }  a top-level field just finished
+ * Sections are a preview; only the validated result is returned.
+ */
+async function generateWithRetry(prompt, schema, { onProgress, ...options }, retries = 3) {
   const generate = provider === "groq" ? generateWithGroq : generateWithGemini;
   const jsonSchema = JSON_SCHEMAS.get(schema);
+  const fields = new Set(Object.keys(schema.shape));
   let lastError;
 
   const estimate = estimateTokens(prompt, jsonSchema, options);
@@ -129,7 +170,20 @@ async function generateWithRetry(prompt, schema, options, retries = 3) {
     // hit them again.
     const slot = await takeGlobalSlot(estimate);
     try {
-      const { text, tokens } = await generate(prompt, jsonSchema, options);
+      let onText;
+      if (onProgress) {
+        onProgress({ type: "attempt", attempt });
+        const sent = new Set();
+        onText = (text) => {
+          for (const [key, value] of Object.entries(completedSections(text))) {
+            if (fields.has(key) && !sent.has(key)) {
+              sent.add(key);
+              onProgress({ type: "section", key, value });
+            }
+          }
+        };
+      }
+      const { text, tokens } = await generate(prompt, jsonSchema, { ...options, onText });
       await settleGlobalSlot(slot, tokens).catch((err) => console.error("settleGlobalSlot failed:", err.message));
       const validated = schema.parse(JSON.parse(text));
 
@@ -145,7 +199,7 @@ async function generateWithRetry(prompt, schema, options, retries = 3) {
   throw new Error(`AI failed to generate valid structured response (${provider}): ${lastError?.message}`);
 }
 
-async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
+async function generateInterviewReport({ resume, selfDescription, jobDescription, onProgress }) {
   const prompt = `
 You are an expert technical interviewer.
 
@@ -173,7 +227,8 @@ Job Description: ${jobDescription}
   const result = await generateWithRetry(prompt, interviewReportSchema, {
     system: "You are an expert technical interviewer.",
     temperature: 0.5,
-    expectedOutputTokens: 2500 // 8 questions with answers, gaps and a 5-day plan
+    expectedOutputTokens: 2500, // 8 questions with answers, gaps and a 5-day plan
+    onProgress
   });
 
   return result;
