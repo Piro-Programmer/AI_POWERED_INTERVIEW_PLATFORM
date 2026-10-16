@@ -57,15 +57,6 @@ export const router = createBrowserRouter([
     lazy: page(() => import("./features/auth/pages/Login"))
   },
   {
-    path: "/forgot-password",
-    lazy: page(() => import("./features/auth/pages/ForgotPassword"))
-  },
-  {
-    // opened from the reset email: /reset-password?token=...
-    path: "/reset-password",
-    lazy: page(() => import("./features/auth/pages/ResetPassword"))
-  },
-  {
     path: "/register",
     lazy: page(() => import("./features/auth/pages/Register"))
   },

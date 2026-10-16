@@ -70,10 +70,6 @@ const Privacy = () => (
           </li>
           <li><strong>Hosting:</strong> Vercel serves the website, Render runs the server, and a hosted MongoDB database stores the data above.</li>
           <li><strong>Google Fonts</strong> delivers the typefaces, so your browser contacts Google when the page loads.</li>
-          <li>
-            <strong>Resend</strong> sends the password-reset email, if you ask for one. It receives your email address
-            and the message. Reset links work once and expire after 30 minutes.
-          </li>
         </ul>
       </section>
 

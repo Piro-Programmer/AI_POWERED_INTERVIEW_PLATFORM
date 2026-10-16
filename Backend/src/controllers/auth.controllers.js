@@ -1,11 +1,9 @@
 import userModel from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import tokenBlacklistModel from "../models/blacklist.model.js";
 import { deleteUserAndData } from "../services/userData.service.js";
-import passwordResetModel from "../models/passwordReset.model.js";
-import { EmailNotConfiguredError, isEmailEnabled, sendEmail } from "../services/mail.service.js";
 
 // In production the cookie is only sent over HTTPS. SameSite defaults to "lax",
 // which works when the frontend proxies /api to this server (same site).
@@ -273,101 +271,7 @@ async function deleteAccountController(req, res) {
   res.status(200).json({ message: "Your account and all its data have been deleted." });
 }
 
-// ---------------------------------------------------------------------------
-// Password reset by email
-
-const RESET_MINUTES = 30;
-const RESET_TOKEN = /^[A-Za-z0-9_-]{43}$/; // 32 random bytes as base64url
-const hashToken = (token) => createHash("sha256").update(token).digest("hex");
-
-// Where the emailed link points: APP_URL, else the first allowed frontend origin.
-const appUrl = () =>
-  (process.env.APP_URL || (process.env.CLIENT_URL || "http://localhost:5173").split(",")[0]).trim().replace(/\/$/, "");
-
-const FORGOT_REPLY = "If an account exists for that email, a reset link is on its way. It works for 30 minutes.";
-
-/**
- * @name forgotPasswordController
- * @description Email a one-time reset link. Expects { email }. Always gives the
- *              same answer, so it can't be used to find out who has an account.
- * @access Public (rate limited per network and per email)
- */
-async function forgotPasswordController(req, res) {
-  const { email } = req.body || {};
-  if (typeof email !== "string" || !email.trim()) {
-    return res.status(400).json({ message: "Please enter your email address." });
-  }
-  if (!isEmailEnabled()) {
-    return res.status(503).json({ code: "EMAIL_DISABLED", message: "Password reset by email isn't set up on this site yet." });
-  }
-
-  try {
-    const user = await userModel.findOne({ email: email.trim() }).select("username email").lean();
-    if (user) {
-      const token = randomBytes(32).toString("base64url");
-      await passwordResetModel.findOneAndUpdate(
-        { user: user._id },
-        { tokenHash: hashToken(token), expiresAt: new Date(Date.now() + RESET_MINUTES * 60 * 1000) },
-        { upsert: true }
-      );
-
-      const link = `${appUrl()}/reset-password?token=${token}`;
-      await sendEmail({
-        to: user.email,
-        subject: "Reset your Interview Lab password",
-        text: `Hi ${user.username},\n\nSomeone (hopefully you) asked to reset the password for your Interview Lab account.\n\nSet a new password here (the link works for ${RESET_MINUTES} minutes, once):\n${link}\n\nIf it wasn't you, ignore this email: your password stays the same.`,
-        html: `<p>Hi ${escapeHtml(user.username)},</p><p>Someone (hopefully you) asked to reset the password for your Interview Lab account.</p><p><a href="${link}">Set a new password</a>. The link works for ${RESET_MINUTES} minutes, once.</p><p>If it wasn't you, ignore this email: your password stays the same.</p>`
-      });
-    }
-  } catch (err) {
-    // log it, but answer the same way so the reply never reveals anything
-    console.error("forgotPassword failed:", err instanceof EmailNotConfiguredError ? "email not configured" : err.message);
-  }
-
-  return res.status(200).json({ message: FORGOT_REPLY });
-}
-
-const escapeHtml = (text = "") =>
-  String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-
-/**
- * @name resetPasswordController
- * @description Set a new password with an emailed token. Expects { token, password }.
- *              The link works once; every existing session is signed out.
- * @access Public (rate limited per network)
- */
-async function resetPasswordController(req, res) {
-  const { token, password } = req.body || {};
-  const invalid = () =>
-    res.status(400).json({ code: "RESET_INVALID", message: "This reset link is invalid or has expired. Ask for a new one." });
-
-  if (typeof token !== "string" || !RESET_TOKEN.test(token)) return invalid();
-  if (typeof password !== "string") {
-    return res.status(400).json({ message: "Please enter a new password." });
-  }
-  const passwordProblem = checkPassword(password);
-  if (passwordProblem) {
-    return res.status(400).json({ message: passwordProblem });
-  }
-
-  // take the reset atomically, so the same link can't be used twice
-  const reset = await passwordResetModel.findOneAndDelete({ tokenHash: hashToken(token), expiresAt: { $gt: new Date() } }).lean();
-  if (!reset) return invalid();
-
-  const user = await userModel.findById(reset.user);
-  if (!user) return invalid();
-
-  user.password = await bcrypt.hash(password, 10);
-  // the next whole second: every session issued so far is signed out
-  user.passwordChangedAt = new Date(Math.ceil(Date.now() / 1000) * 1000);
-  await user.save();
-
-  return res.status(200).json({ message: "Your password has been changed. Sign in with the new one." });
-}
-
 export default {
-  forgotPasswordController,
-  resetPasswordController,
   registerUserController,
   loginUserController,
   logoutUserController,
