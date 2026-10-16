@@ -1,13 +1,11 @@
 // The real backend (Backend/server.js) on a throwaway in-memory MongoDB, with
 // the AI service swapped for a fake. Playwright starts this before the tests.
 import { createRequire, register } from "node:module";
-import { rmSync } from "node:fs";
-import { E2E_ADMIN, OUTBOX } from "./fixtures.js";
+import { E2E_ADMIN } from "./fixtures.js";
 import { MongoMemoryServer } from "mongodb-memory-server";
 
 register("./hooks.mjs", import.meta.url);
 
-rmSync(OUTBOX, { force: true }); // a fresh outbox for every run
 const mongod = await MongoMemoryServer.create();
 
 Object.assign(process.env, {
