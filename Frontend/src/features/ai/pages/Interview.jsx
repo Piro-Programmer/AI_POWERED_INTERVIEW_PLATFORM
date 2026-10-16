@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { generateReport, getUsage } from "../services/interview.api";
+import { getUsage } from "../services/interview.api";
+import { generateReportStream } from "../services/reportStream";
 import "../interview.scss";
 import Wordmark from "../../../components/Wordmark";
 import ReadingSheet from "../components/ReadingSheet";
@@ -25,6 +26,8 @@ const Interview = () => {
   const [report, setReport] = useState(null);
   const [submittedJD, setSubmittedJD] = useState("");
   const [usage, setUsage] = useState(null);
+  // parts of the report as the AI finishes them: { sections: { key: value }, attempt }
+  const [live, setLive] = useState(null);
   const outputRef = useRef(null);
 
   const inputStats = useMemo(() => {
@@ -72,8 +75,14 @@ const Interview = () => {
     setSubmittedJD(jobDescription.trim());
     setLoading(true);
     setReport(null);
+    setLive({ sections: {}, attempt: 1 });
     try {
-      const data = await generateReport({ resume, selfDescription, jobDescription });
+      const data = await generateReportStream({ resume, selfDescription, jobDescription }, ({ event, data }) => {
+        if (event === "start" && data.usage) setUsage(data.usage);
+        // a retry starts over: clear what the first draft showed
+        else if (event === "retry") setLive({ sections: {}, attempt: data.attempt });
+        else if (event === "section") setLive((prev) => ({ ...prev, sections: { ...prev.sections, [data.key]: data.value } }));
+      });
       setReport(data.interviewReport);
       if (data.usage) setUsage(data.usage);
     } catch (err) {
@@ -86,6 +95,7 @@ const Interview = () => {
       }
     } finally {
       setLoading(false);
+      setLive(null);
     }
   };
 
@@ -215,7 +225,7 @@ const Interview = () => {
         </section>
 
         <div className="lab-output" ref={outputRef}>
-          {loading && <ReadingSheet text={submittedJD} />}
+          {loading && <ReadingSheet text={submittedJD} live={live} />}
 
           {!report && !loading && (
             <section className="empty-report">

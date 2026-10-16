@@ -419,7 +419,7 @@ DELETE /api/auth/account    # { password }; deletes the account and all its data
 ### Interview Reports
 
 ```text
-POST /api/interview        # generate a report
+POST /api/interview        # generate a report; with Accept: text/event-stream it streams start, section (each finished part), retry, then done or error
 GET  /api/interview        # one page of your report summaries: ?page, limit (max 50), sort (newest|oldest|high|low), q, status
 GET  /api/interview/usage  # today's allowances: { usage, reviewUsage }, each { limit, used, remaining, resetsAt }
 GET  /api/interview/:id    # one report in full

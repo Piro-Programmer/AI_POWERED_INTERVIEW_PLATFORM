@@ -3,7 +3,23 @@
 
 export const FAKE_VERDICT = "Fake review: clear structure, add one concrete number.";
 
-export default async function generateInterviewReport() {
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// With onProgress (the streaming path), hand over each part with a short
+// pause, like a real model writing, so the page's live progress can be seen.
+export default async function generateInterviewReport({ onProgress } = {}) {
+  const report = fakeReport();
+  if (onProgress) {
+    onProgress({ type: "attempt", attempt: 1 });
+    for (const [key, value] of Object.entries(report)) {
+      await pause(250);
+      onProgress({ type: "section", key, value });
+    }
+  }
+  return report;
+}
+
+function fakeReport() {
   return {
     matchScore: 72,
     technicalQuestions: [1, 2, 3, 4, 5].map((n) => ({
