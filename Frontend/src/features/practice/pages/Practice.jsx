@@ -13,7 +13,14 @@ import "../../ai/report.scss";
 import "../../history/history.scss";
 import "../practice.scss";
 
-const resetTime = (iso) => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+// a time for today's cap, a date when the monthly allowance is what ran out
+const resetTime = (iso) => {
+  const date = new Date(iso);
+  return date - Date.now() > 24 * 60 * 60 * 1000
+    ? date.toLocaleDateString([], { day: "numeric", month: "short" })
+    : date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+};
+const LIMIT_CODES = ["DAILY_LIMIT", "MONTHLY_LIMIT"];
 
 const Practice = () => {
   const { id } = useParams();
@@ -142,7 +149,7 @@ const Practice = () => {
       });
     } catch (err) {
       const data = err.response?.data;
-      if (data?.code === "DAILY_LIMIT" && data.usage) {
+      if (LIMIT_CODES.includes(data?.code) && data.usage) {
         setReviewUsage(data.usage);
         setError(`${data.message} More at ${resetTime(data.usage.resetsAt)}.`);
       } else {

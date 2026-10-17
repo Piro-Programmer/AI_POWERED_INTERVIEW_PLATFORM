@@ -2,7 +2,8 @@ import mongoose from "mongoose";
 import interviewReportModel from "../models/interviewReport.model.js";
 import practiceAttemptModel from "../models/practiceAttempt.model.js";
 import { evaluateAnswer } from "../services/ai.service.js";
-import { getUsage, refundGeneration, reserveGeneration } from "../services/aiQuota.service.js";
+import { getUsage, limitResponse, refundGeneration, reserveGeneration } from "../services/aiQuota.service.js";
+import { getEntitlement } from "../services/entitlement.service.js";
 import { AiCapacityError } from "../services/aiCapacity.service.js";
 
 const MIN_ANSWER = 20;
@@ -20,7 +21,8 @@ const roleSummary = (report) =>
 /**
  * @name submitPracticeAnswerController
  * @description Review one practice answer with the AI and save the attempt.
- *              Uses one of the user's daily review allowance.
+ *              Uses one review of the user's plan (today's cap and the
+ *              billing period's allowance).
  * @access private
  */
 async function submitPracticeAnswerController(req, res) {
@@ -60,15 +62,12 @@ async function submitPracticeAnswerController(req, res) {
   let reservation = null;
 
   try {
-    reservation = await reserveGeneration(userId, "review");
-    if (!reservation) {
-      const usage = await getUsage(userId, "review");
-      return res.status(429).json({
-        code: "DAILY_LIMIT",
-        message: `You've used all ${usage.limit} answer reviews for today.`,
-        usage
-      });
+    const entitlement = await getEntitlement(req.user);
+    const outcome = await reserveGeneration(userId, "review", entitlement);
+    if (outcome.limited) {
+      return res.status(429).json(limitResponse(outcome, "answer reviews"));
     }
+    reservation = outcome;
 
     const feedback = await evaluateAnswer({
       question: question.question,
@@ -97,7 +96,7 @@ async function submitPracticeAnswerController(req, res) {
     });
   } catch (err) {
     if (reservation) {
-      await refundGeneration(userId, reservation.day, "review").catch((refundErr) =>
+      await refundGeneration(userId, reservation, "review").catch((refundErr) =>
         console.error("refundGeneration failed:", refundErr.message)
       );
     }
@@ -142,7 +141,7 @@ async function getPracticeSummaryController(req, res) {
       entry.bestScore = Math.max(entry.bestScore, attempt.feedback.score);
     }
 
-    const reviewUsage = await getUsage(userId, "review");
+    const reviewUsage = await getUsage(userId, "review", await getEntitlement(req.user));
     return res.status(200).json({ questions, totalAttempts: attempts.length, reviewUsage });
   } catch (err) {
     console.error("getPracticeSummary failed:", err.message);
