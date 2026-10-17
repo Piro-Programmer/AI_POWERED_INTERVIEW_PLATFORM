@@ -16,7 +16,9 @@ Object.assign(process.env, {
   TRUST_PROXY_HOPS: "1", // client IP from X-Forwarded-For, like behind Vercel
   CLIENT_URL: "http://localhost:4180",
   AI_DAILY_LIMIT: "50",
-  AI_DAILY_REVIEW_LIMIT: "50"
+  AI_DAILY_REVIEW_LIMIT: "50",
+  AI_MONTHLY_LIMIT: "500",
+  AI_MONTHLY_REVIEW_LIMIT: "500"
 });
 
 const stop = async () => {

@@ -6,6 +6,8 @@ import { MongoMemoryServer } from "mongodb-memory-server";
 process.env.JWT_SECRET = "test-secret";
 process.env.AI_DAILY_LIMIT = "3";
 process.env.AI_DAILY_REVIEW_LIMIT = "3";
+process.env.AI_MONTHLY_LIMIT = "100";
+process.env.AI_MONTHLY_REVIEW_LIMIT = "100";
 process.env.TRUST_PROXY_HOPS = "0";
 process.env.NODE_ENV = "test";
 delete process.env.GROQ_API_KEY;

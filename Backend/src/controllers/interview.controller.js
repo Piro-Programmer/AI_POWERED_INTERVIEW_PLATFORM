@@ -6,7 +6,8 @@ import { randomBytes } from "node:crypto";
 import generateInterviewReport from "../services/ai.service.js";
 import interviewReportModel from "../models/interviewReport.model.js";
 import practiceAttemptModel from "../models/practiceAttempt.model.js";
-import { getUsage, refundGeneration, reserveGeneration } from "../services/aiQuota.service.js";
+import { getUsage, limitResponse, refundGeneration, reserveGeneration } from "../services/aiQuota.service.js";
+import { getEntitlement } from "../services/entitlement.service.js";
 import { AiCapacityError } from "../services/aiCapacity.service.js";
 
 function createReportTitle(jobDescription) {
@@ -68,7 +69,8 @@ function openEventStream(res) {
  * @name generateInterviewReportController
  * @description Parse the uploaded resume PDF, generate a structured interview
  *              report via the AI service, persist it, and return it.
- *              Each successful generation uses one of the user's daily allowance.
+ *              Each successful generation uses one report of the user's plan
+ *              (today's cap and the billing period's allowance).
  *              With "Accept: text/event-stream" the answer is a stream of
  *              events instead: start, section (each finished part, as a
  *              preview), retry, then done { interviewReport, usage } or
@@ -106,16 +108,13 @@ async function generateInterviewReportController(req, res) {
   let stream = null;
 
   try {
-    reservation = await reserveGeneration(userId);
+    const entitlement = await getEntitlement(req.user);
+    const outcome = await reserveGeneration(userId, "report", entitlement);
 
-    if (!reservation) {
-      const usage = await getUsage(userId);
-      return res.status(429).json({
-        code: "DAILY_LIMIT",
-        message: `You've used all ${usage.limit} reports for today.`,
-        usage
-      });
+    if (outcome.limited) {
+      return res.status(429).json(limitResponse(outcome, "reports"));
     }
+    reservation = outcome;
 
     let resumeText = "";
     if (req.file?.buffer) {
@@ -161,7 +160,7 @@ async function generateInterviewReportController(req, res) {
   } catch (err) {
     // A failed generation shouldn't cost the user a report
     if (reservation) {
-      await refundGeneration(userId, reservation.day).catch((refundErr) =>
+      await refundGeneration(userId, reservation, "report").catch((refundErr) =>
         console.error("refundGeneration failed:", refundErr.message)
       );
     }
@@ -189,14 +188,16 @@ async function generateInterviewReportController(req, res) {
 
 /**
  * @name getUsageController
- * @description How many AI reports the user has left today.
+ * @description How many AI reports and reviews the user has left, today and
+ *              in the billing period.
  * @access private
  */
 async function getUsageController(req, res) {
   try {
+    const entitlement = await getEntitlement(req.user);
     const [usage, reviewUsage] = await Promise.all([
-      getUsage(req.user.id, "report"),
-      getUsage(req.user.id, "review")
+      getUsage(req.user.id, "report", entitlement),
+      getUsage(req.user.id, "review", entitlement)
     ]);
     return res.status(200).json({ usage, reviewUsage });
   } catch (err) {

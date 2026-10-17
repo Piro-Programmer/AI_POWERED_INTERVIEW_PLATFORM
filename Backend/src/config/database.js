@@ -12,7 +12,8 @@ async function connectToDB() {
   console.log("Connected to Database");
 
   // The usage counter's unique index changed from {user, day} to
-  // {user, day, kind}; drop the old one so review counters can coexist.
+  // {user, day, kind}, and its expiry moved from createdAt to a per-bucket
+  // expiresAt; syncing drops the old indexes and builds the new ones.
   await aiUsageModel.syncIndexes();
   // Adds the token lookup index and the TTL index that expires old entries.
   await tokenBlacklistModel.syncIndexes();
@@ -21,6 +22,12 @@ async function connectToDB() {
   // no-ops once nothing matches. A failure here is logged, not fatal: the
   // database is reachable, so the server should still start.
   await Promise.all([
+    // daily usage counters from before per-bucket expiry: same week as before
+    aiUsageModel.updateMany(
+      { expiresAt: { $exists: false } },
+      [{ $set: { expiresAt: { $add: [{ $ifNull: ["$createdAt", "$$NOW"] }, 7 * DAY_MS] } } }],
+      { updatePipeline: true }
+    ),
     // blacklist entries without expiresAt would never be removed by the TTL index
     tokenBlacklistModel.updateMany(
       { expiresAt: { $exists: false } },

@@ -2,6 +2,7 @@ import userModel from "../models/user.model.js";
 import interviewReportModel from "../models/interviewReport.model.js";
 import practiceAttemptModel from "../models/practiceAttempt.model.js";
 import aiUsageModel from "../models/aiUsage.model.js";
+import subscriptionModel from "../models/subscription.model.js";
 
 /**
  * Delete a user and everything stored for them: reports (and with them any
@@ -14,7 +15,8 @@ export async function deleteUserAndData(userId) {
   await Promise.all([
     interviewReportModel.deleteMany({ user: userId }),
     practiceAttemptModel.deleteMany({ user: userId }),
-    aiUsageModel.deleteMany({ user: userId })
+    aiUsageModel.deleteMany({ user: userId }),
+    subscriptionModel.deleteMany({ user: userId })
   ]);
   await userModel.deleteOne({ _id: userId });
 }
