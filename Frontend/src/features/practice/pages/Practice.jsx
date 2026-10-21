@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import AppSidebar from "../../../components/AppSidebar";
 import { getPracticeProgress, getPracticeSummary, getReport, submitPracticeAnswer } from "../../ai/services/interview.api";
 import { cleanTitle } from "../../history/history.utils";
+import UpgradeNudge from "../../billing/components/UpgradeNudge";
 import AnswerCard from "../components/AnswerCard";
 import FeedbackPanel from "../components/FeedbackPanel";
 import ProgressPanel from "../components/ProgressPanel";
@@ -287,15 +288,18 @@ const Practice = () => {
                   busy={busy}
                   locked={Boolean(feedback)}
                   blockedReason={
-                    outOfReviews
-                      ? `You’ve used today’s ${reviewUsage.limit} answer reviews. More at ${resetTime(reviewUsage.resetsAt)}.`
-                      : ""
+                    !outOfReviews
+                      ? ""
+                      : reviewUsage.limitedBy === "month"
+                        ? `You’ve used this month’s ${reviewUsage.monthly.limit} answer reviews. More on ${resetTime(reviewUsage.resetsAt)}.`
+                        : `You’ve used today’s ${reviewUsage.limit} answer reviews. More at ${resetTime(reviewUsage.resetsAt)}.`
                   }
                   onSubmit={submit}
                   onSkip={() => goNext(true)}
                 />
     
                 {error && <p className="error practice__error" role="alert">{error}</p>}
+                {outOfReviews && <UpgradeNudge usage={reviewUsage} />}
     
                 {feedback && (
                   <FeedbackPanel feedback={feedback} question={current} onRetry={retry} onNext={() => goNext(false)} />

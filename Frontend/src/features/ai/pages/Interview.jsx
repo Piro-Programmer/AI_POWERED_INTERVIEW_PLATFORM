@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { getUsage } from "../services/interview.api";
+import UpgradeNudge from "../../billing/components/UpgradeNudge";
 import { generateReportStream } from "../services/reportStream";
 import "../interview.scss";
 import Wordmark from "../../../components/Wordmark";
@@ -187,16 +188,19 @@ const Interview = () => {
               {loading
                 ? "Writing your report…"
                 : outOfReports
-                  ? "Daily limit reached"
+                  ? usage.limitedBy === "month" ? "Monthly limit reached" : "Daily limit reached"
                   : report
                     ? "Generate a new report"
                     : "Generate report"}
             </button>
             {outOfReports && !error && (
               <p className="limit-note">
-                You’ve used today’s {usage.limit} reports. Your allowance resets at {resetTime(usage.resetsAt)}.
+                {usage.limitedBy === "month"
+                  ? `You’ve used this month’s ${usage.monthly.limit} reports. More on ${resetTime(usage.resetsAt)}.`
+                  : `You’ve used today’s ${usage.limit} reports. Your allowance resets at ${resetTime(usage.resetsAt)}.`}
               </p>
             )}
+            {outOfReports && <UpgradeNudge usage={usage} />}
           </form>
 
           <aside className="readiness-panel">

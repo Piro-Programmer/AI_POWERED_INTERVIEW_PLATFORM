@@ -1,5 +1,6 @@
 import { useContext, useState } from "react";
 import AppSidebar from "../../../components/AppSidebar";
+import PlanSummary from "../../billing/components/PlanSummary";
 import { AuthContext } from "../auth.context";
 import { PASSWORD_HINT, passwordProblem } from "../password";
 import { changePassword, deleteAccount } from "../services/auth.api";
@@ -152,6 +153,8 @@ const Account = () => {
           <h2>{user?.username}</h2>
           <p>{user?.email}</p>
         </header>
+
+        <PlanSummary />
 
         <div className="account">
           <ChangePassword />

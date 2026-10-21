@@ -1,0 +1,363 @@
+// Plans, pricing and usage. Same paper as the rest: ink rules, one
+// highlighter for the plan that matters, red pen only for trouble.
+
+// ---------------------------------------------------------------------------
+// Pricing page (/pricing)
+
+.pricing {
+  width: 100%;
+  max-width: 76rem;
+  margin-inline: auto;
+  padding: clamp(2.5rem, 7vw, 5rem) clamp(1rem, 4vw, 3rem) 4rem;
+
+  &__head h1 {
+    margin-top: 0.75rem;
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    line-height: 1.04;
+  }
+
+  &__loading {
+    margin-top: 3rem;
+    font-family: var(--hand);
+    font-size: 1.5rem;
+    color: var(--muted);
+  }
+
+  &__soon {
+    display: inline-block;
+    margin-top: 2rem;
+    padding: 0.4rem 0.75rem;
+    font-family: var(--hand);
+    font-size: 1.35rem;
+    line-height: 1.2;
+    color: var(--pen);
+    border: 1.5px solid var(--pen);
+    border-radius: 255px 18px 225px 18px / 18px 225px 18px 255px;
+    transform: rotate(-1deg);
+  }
+}
+
+.billing-error {
+  margin-top: 2rem;
+  padding: 0.7rem 0.85rem;
+  border-left: 3px solid var(--pen);
+  color: var(--pen);
+  background: var(--pen-soft);
+}
+
+.plan-cards {
+  margin-top: 2.5rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.plan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 1.75rem 1.5rem 1.5rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+
+  h3 {
+    font-size: 1.6rem;
+  }
+
+  &--featured {
+    border: 2px solid var(--ink);
+    box-shadow: 6px 6px 0 var(--hl);
+  }
+
+  &--current {
+    background: var(--paper-sunk);
+  }
+
+  &__flag {
+    position: absolute;
+    top: -0.95rem;
+    right: 1.25rem;
+    padding: 0 0.4rem;
+    font-family: var(--hand);
+    font-size: 1.3rem;
+    color: var(--pen);
+    background: var(--paper);
+    transform: rotate(2deg);
+  }
+
+  &__price {
+    margin-top: 0.6rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+
+    strong {
+      font-family: var(--serif);
+      font-size: 2.6rem;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    span {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+  }
+
+  &__features {
+    margin-top: 1.4rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--rule);
+    list-style: none;
+    display: grid;
+    gap: 0.55rem;
+    color: var(--ink-2);
+    font-size: 0.95rem;
+
+    li {
+      position: relative;
+      padding-left: 1.4rem;
+
+      // a hand-drawn tick
+      &::before {
+        content: "";
+        position: absolute;
+        left: 0.1rem;
+        top: 0.35em;
+        width: 0.7rem;
+        height: 0.4rem;
+        border-left: 2px solid var(--ok);
+        border-bottom: 2px solid var(--ok);
+        transform: rotate(-48deg);
+      }
+    }
+  }
+
+  &__action {
+    margin-top: auto;
+    padding-top: 1.6rem;
+
+    .button {
+      width: 100%;
+    }
+  }
+
+  &__current,
+  &__note {
+    display: block;
+    padding: 0.7rem 0;
+    text-align: center;
+    font-weight: 600;
+  }
+
+  &__current {
+    background: var(--hl-soft);
+    border-radius: var(--radius);
+  }
+
+  &__note {
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 0.92rem;
+  }
+}
+
+.compare,
+.faq {
+  margin-top: 4.5rem;
+
+  h2 {
+    font-size: clamp(1.7rem, 3.4vw, 2.4rem);
+  }
+}
+
+.compare__scroll {
+  margin-top: 1.25rem;
+  overflow-x: auto;
+}
+
+.compare table {
+  width: 100%;
+  min-width: 32rem;
+  border-collapse: collapse;
+  font-size: 0.97rem;
+
+  th,
+  td {
+    padding: 0.8rem 0.75rem;
+    border-bottom: 1px solid var(--rule);
+    text-align: right;
+  }
+
+  thead th {
+    font-family: var(--serif);
+    font-size: 1.15rem;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  tbody th {
+    text-align: left;
+    font-weight: 400;
+    color: var(--ink-2);
+  }
+
+  td {
+    font-family: var(--mono);
+    font-size: 0.92rem;
+  }
+}
+
+.faq dl {
+  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.75rem 2.5rem;
+
+  > div {
+    padding-top: 0.9rem;
+    border-top: 2px solid var(--ink);
+  }
+
+  dt {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 1.15rem;
+  }
+
+  dd {
+    margin-top: 0.4rem;
+    color: var(--ink-2);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Plan summary: dashboard and account page
+
+.plan-summary {
+  margin-top: 2.5rem;
+  padding: 1.5rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+
+  &--loading {
+    min-height: 9rem;
+    background: var(--paper-sunk);
+    border-style: dashed;
+  }
+
+  &__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+
+    h3 {
+      margin-top: 0.35rem;
+    }
+  }
+
+  &__status {
+    margin-top: 0.5rem;
+    color: var(--ink-2);
+    font-size: 0.95rem;
+  }
+
+  &__meters {
+    margin-top: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 1.25rem 2rem;
+  }
+}
+
+.plan-badge {
+  display: inline-block;
+  padding: 0.05em 0.45em;
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+
+  &--pro,
+  &--premium {
+    background: var(--hl);
+  }
+
+  &--premium {
+    color: var(--paper-raised);
+    background: var(--ink);
+    box-shadow: 3px 3px 0 var(--hl);
+  }
+}
+
+.usage-meter {
+  &__head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.92rem;
+    color: var(--ink-2);
+
+    strong {
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      color: var(--ink);
+    }
+  }
+
+  &__bar {
+    margin-top: 0.4rem;
+    height: 0.55rem;
+    border: 1px solid var(--ink);
+    border-radius: 999px;
+    background: var(--paper);
+    overflow: hidden;
+
+    span {
+      display: block;
+      height: 100%;
+      background: var(--hl);
+      border-right: 1px solid var(--ink);
+      transition: width 400ms ease;
+    }
+
+    &--full span {
+      background: var(--pen);
+    }
+  }
+
+  small {
+    display: block;
+    margin-top: 0.3rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Upgrade nudge, shown where an allowance ran out
+
+.upgrade-nudge {
+  margin-top: 0.75rem;
+  padding: 0.8rem 1rem;
+  border: 1px dashed var(--ink);
+  border-radius: var(--radius);
+  background: var(--hl-soft);
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+@media (max-width: 900px) {
+  .plan-cards {
+    grid-template-columns: 1fr;
+    max-width: 30rem;
+  }
+
+  .faq dl {
+    grid-template-columns: 1fr;
+  }
+}

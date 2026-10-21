@@ -19,6 +19,11 @@ export const router = createBrowserRouter([
     lazy: page(() => import("./pages/Privacy"))
   },
   {
+    // public: plans and prices, with "your plan" marked when signed in
+    path: "/pricing",
+    lazy: page(() => import("./features/billing/pages/Pricing"))
+  },
+  {
     path: "/dashboard",
     lazy: page(() => import("./pages/Home"), { protect: true })
   },

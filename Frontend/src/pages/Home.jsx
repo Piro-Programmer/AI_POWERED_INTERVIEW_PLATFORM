@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../features/auth/hooks/useAuth";
 import AppSidebar from "../components/AppSidebar";
+import PlanSummary from "../features/billing/components/PlanSummary";
 
 const Home = () => {
   const { user } = useAuth();
@@ -23,6 +24,8 @@ const Home = () => {
             <Link className="button secondary-button" to="/reports">Your reports</Link>
           </div>
         </header>
+
+        <PlanSummary compact />
 
         <section className="insight-grid" aria-label="Tips for a sharper report">
           <article className="insight-card">

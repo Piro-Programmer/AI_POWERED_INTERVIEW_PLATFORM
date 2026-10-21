@@ -15,6 +15,7 @@ const AppSidebar = () => {
         <NavLink className={navClass} to="/dashboard">Your desk</NavLink>
         <NavLink className={navClass} to="/interview">New report</NavLink>
         <NavLink className={navClass} to="/reports">Your reports</NavLink>
+        <NavLink className={navClass} to="/pricing">Plans</NavLink>
         <NavLink className={navClass} to="/account">Account</NavLink>
         {user?.role === "admin" && <NavLink className={navClass} to="/admin">Admin</NavLink>}
       </nav>
