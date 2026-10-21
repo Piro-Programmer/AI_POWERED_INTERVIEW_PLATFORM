@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../features/auth/hooks/useAuth";
 import Wordmark from "../components/Wordmark";
 import LiveMarkup from "../features/landing/components/LiveMarkup";
+import LandingPlans from "../features/landing/components/LandingPlans";
 import "../features/landing/landing.scss";
 
 const REPO_URL = "https://github.com/Piro-Programmer/AI_POWERED_INTERVIEW_PLATFORM";
@@ -48,7 +49,7 @@ const Landing = () => {
           <a href="#try">Try it</a>
           <a href="#report">What you get</a>
           <a href="#how">How it works</a>
-          <Link to="/pricing">Pricing</Link>
+          <a href="#pricing">Pricing</a>
         </nav>
         <div className="topbar__actions">
           {user ? (
@@ -204,19 +205,7 @@ const Landing = () => {
           </div>
         </section>
 
-        <section className="plans-teaser" id="pricing" data-reveal>
-          <div>
-            <p className="eyebrow">§ 04 · Pricing</p>
-            <h2>Free to start. More when you’re interviewing a lot.</h2>
-          </div>
-          <div>
-            <p>
-              Every account gets reports and practice reviews every month at no cost. Pro and Premium raise the
-              limits for weeks when the interviews stack up.
-            </p>
-            <Link className="text-link" to="/pricing">Compare plans →</Link>
-          </div>
-        </section>
+        <LandingPlans />
 
         <section className="closing">
           <h2 data-reveal>
