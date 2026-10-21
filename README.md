@@ -10,7 +10,7 @@
 
 Interview Lab is a full-stack web application built with the MERN stack and the Groq API. It helps candidates prepare for interviews in a focused, role-specific way.
 
-Paste a job description, optionally upload your resume, and get a structured report: a match score, the questions you're likely to be asked (with the intent behind each and how to answer), your skill gaps, and a five-day preparation plan.
+Paste a job description, optionally upload your resume, and get a structured report: a match score, the questions you're likely to be asked (with the intent behind each and how to answer), your skill gaps, and a five-day preparation plan. Then practise each answer out loud and get AI feedback. A Free plan covers occasional use; Pro and Premium are monthly subscriptions paid through Razorpay.
 
 ## Problem Statement
 
@@ -62,6 +62,14 @@ Every response is validated against a strict schema before it reaches the user, 
 - Search, sort by date or score, and filter by plan progress
 - Open any report again, or practise the same role with the job description pre-filled
 
+**Plans and payments (Razorpay)**
+- Three plans: **Free**, **Pro** (₹299/month) and **Premium** (₹699/month), each with a daily cap and a monthly allowance for reports and answer reviews
+- `/pricing` page with checkout through Razorpay (UPI, cards, e-mandate). Card details go straight to Razorpay and never reach our servers
+- Monthly auto-renewing subscriptions. Paid allowances renew on the day the user is charged, not on the 1st
+- `/billing` page: current plan and usage, cancel (the plan stays until the period ends), resume, upgrade now or downgrade at period end, and payment history
+- Checkout and webhook signatures checked with HMAC-SHA256 and a timing-safe comparison; webhooks are deduplicated, out-of-order events are ignored, and a missed webhook is reconciled from Razorpay
+- 3-day grace period when a renewal fails; deleting an account cancels its subscription at once
+
 **Platform**
 - Registration, login, logout and protected routes
 - JWT authentication in an HTTP-only cookie
@@ -72,7 +80,7 @@ Every response is validated against a strict schema before it reaches the user, 
 - Deployed with the frontend on Vercel and the backend on Render
 
 **Limits and security**
-- Daily AI allowances per user, shown in the UI: 10 reports and 30 answer reviews a day by default
+- Daily and monthly AI allowances per user from their plan, shown in the UI (Free: 2 reports a day and 5 a month by default)
 - The allowance is reserved atomically in MongoDB, so parallel requests can't overshoot it, and a failed AI call gives it back
 - Site-wide caps on AI provider usage, in requests **and tokens** per minute and per day (retries included), keep the whole site under the provider's rate limits; over a cap, or if the provider answers 429, users get "busy, try again" and their allowance back
 - One report generation at a time per user, plus a short burst limit
@@ -141,19 +149,29 @@ Answer each question by typing or speaking, then get AI feedback: a score, four 
 9. Backend saves the report in MongoDB with a readable title.
 10. Frontend displays the generated report.
 
+### Paying for a plan
+
+1. On `/pricing` the user picks Pro or Premium; the backend creates a Razorpay subscription for them.
+2. Razorpay Checkout opens in the browser and takes the first payment.
+3. The backend checks Razorpay's signature and switches the user to the paid plan.
+4. Razorpay's webhooks (`subscription.charged`, `cancelled`, `halted`, ...) keep the plan, billing period and payment history up to date every month.
+
 ## Project Structure
 
 ```text
 AI_POWERED_INTERVIEW_PLATFORM/
 ├── Backend/
 │   ├── src/
-│   │   ├── config/          # MongoDB connection
-│   │   ├── controllers/     # auth and interview handlers
-│   │   ├── middlewares/     # auth check, file upload
-│   │   ├── models/          # user, report, token blacklist
+│   ├── scripts/             # one-off: create the Razorpay plans
+│   ├── src/
+│   │   ├── config/          # MongoDB connection, plan catalogue (prices, limits)
+│   │   ├── controllers/     # auth, interview, practice, admin, billing handlers
+│   │   ├── middlewares/     # auth check, file upload, rate limits
+│   │   ├── models/          # user, report, subscription, payment, webhook event, ...
 │   │   ├── routes/
-│   │   ├── services/        # AI report generation (Groq / Gemini)
-│   │   └── app.js           # Express app, CORS, health check
+│   │   ├── services/        # AI (Groq / Gemini), quotas, entitlements, Razorpay
+│   │   └── app.js           # Express app, CORS, health check, Razorpay webhook
+│   ├── test/
 │   ├── .env.example
 │   ├── package.json
 │   └── server.js
@@ -163,6 +181,7 @@ AI_POWERED_INTERVIEW_PLATFORM/
 │   │   ├── features/
 │   │   │   ├── ai/          # new report page and report components
 │   │   │   ├── auth/        # login, register, auth state
+│   │   │   ├── billing/     # pricing, checkout, billing page
 │   │   │   └── landing/     # landing page demo
 │   │   ├── lib/             # shared API client
 │   │   ├── pages/           # landing page, dashboard
@@ -196,6 +215,7 @@ AI_POWERED_INTERVIEW_PLATFORM/
 - Multer
 - pdf-parse
 - Zod
+- Razorpay (`razorpay` SDK) for subscriptions
 
 ### AI Integration
 
@@ -237,6 +257,8 @@ GROQ_API_KEY=your_groq_api_key
 Get a Groq API key at https://console.groq.com/keys. To use a different Groq model, set `GROQ_MODEL`.
 
 To use Gemini instead, leave `GROQ_API_KEY` out and set `GOOGLE_GENAI_API_KEY` (optionally `GEMINI_MODEL`).
+
+Payments are optional. Without Razorpay keys the app runs on the Free plan, paid plans show as not available, and the billing endpoints answer `503 BILLING_DISABLED`. To turn them on, see [Payments (Razorpay)](#payments-razorpay).
 
 Run backend:
 
@@ -306,6 +328,8 @@ push to main ─► detect changes ─► tests (as above) ─► deploy backend
 - quota: **20 parallel reservations against real MongoDB never exceed a limit of 10**, refunds, separate report/review allowances, burst limit
 - site-wide caps: with a limit of 2 requests a minute, **exactly 2 of 5 simultaneous calls get through**; a second report doesn't fit in 7,000 tokens/min; real token counts replace estimates; retries count and stop at the cap; a provider 429 stops retries at once; 503 + Retry-After with the user's allowance refunded
 - practice: answer review, validation, ownership, refunds, daily limit, best/last score summaries
+- billing: plan limits and billing periods, which subscription states give access (grace period, cancel at period end), plan catalogue with no secrets
+- Razorpay (SDK mocked): valid and forged checkout and webhook signatures, duplicate and out-of-order webhooks, a charge recording the payment and switching the plan, cancel keeping access until the period ends, upgrade/downgrade, reconciliation, `BILLING_DISABLED` without keys
 - app-wide: JSON 404/400/413 errors, security headers, CORS
 
 **Frontend** (Vitest + Testing Library + jsdom): the job-description markup engines, gap matching, practice ordering, plan-progress saving (batched, retried, old browser ticks uploaded), login errors, history search/sort/filter, and the practice answer and feedback components.
@@ -387,6 +411,25 @@ Deploy hooks are secret URLs: anyone holding one can trigger a deploy, so keep t
 
 `vercel.json` also sends every non-API route to `index.html`, so refreshing `/dashboard` or `/interview` works.
 
+### Payments (Razorpay)
+
+1. In the Razorpay dashboard (start in **Test Mode**), open **Account & Settings → API Keys** and generate a key. Copy the Key Id and Secret together; the secret is shown only once.
+2. Turn on **Subscriptions**, then under **Subscriptions → Plans** add two monthly plans: `Pro` ₹299 and `Premium` ₹699. Or run `node scripts/createRazorpayPlans.js` in `Backend` with the keys in `.env`; it prints the plan ids.
+3. Under **Webhooks**, add `https://<your-service>.onrender.com/api/billing/webhook` (the Render URL, not the Vercel proxy) with a random secret. Select the 8 `subscription.*` events and `payment.failed`.
+4. On Render, add:
+
+   ```env
+   RAZORPAY_KEY_ID=rzp_test_...
+   RAZORPAY_KEY_SECRET=...
+   RAZORPAY_WEBHOOK_SECRET=...
+   RAZORPAY_PLAN_PRO=plan_...
+   RAZORPAY_PLAN_PREMIUM=plan_...
+   ```
+
+5. Redeploy. `GET /api/billing/plans` should now show Pro and Premium as `"purchasable": true`.
+
+Test with UPI `success@razorpay`. Subscriptions need a payment method that allows recurring payments, so ordinary test cards are declined. To go live, activate the account, then repeat steps 1–4 in **Live Mode** (keys, plans and webhooks don't carry over) and replace the five values on Render.
+
 ### Calling the backend directly instead (optional)
 
 If you'd rather not proxy through Vercel, set `VITE_API_URL=https://<your-service>.onrender.com` on Vercel, and on Render set `CLIENT_URL=https://<your-app>.vercel.app` and `COOKIE_SAMESITE=none`. Some browsers block cross-site cookies, which is why the proxy setup is recommended.
@@ -433,6 +476,20 @@ GET  /api/interview/:id/practice    # per-question attempts, best/last score and
 GET  /api/interview/:id/practice/progress  # averages (overall, per kind, per criterion), weakest area, 30-day trend
 ```
 
+### Billing
+
+```text
+GET  /api/billing/plans        # public: Free / Pro / Premium with prices (paise), limits, features, purchasable
+GET  /api/billing/me           # your plan, subscription status, billing period, usage, scheduled downgrade
+POST /api/billing/subscribe    # { planId } → { subscriptionId, keyId } for Razorpay Checkout
+POST /api/billing/verify       # Checkout's { razorpay_payment_id, razorpay_subscription_id, razorpay_signature }
+POST /api/billing/cancel       # cancel at the end of the paid period
+POST /api/billing/resume       # undo a pending cancellation
+POST /api/billing/change-plan  # { planId }: upgrade now, downgrade at period end
+GET  /api/billing/invoices     # your payments
+POST /api/billing/webhook      # Razorpay only, signed (raw body)
+```
+
 ### Admin (role "admin" only)
 
 ```text
@@ -463,7 +520,7 @@ GET  /api/health
 
 ## Interview Explanation
 
-I built Interview Lab, an AI-powered interview preparation platform using the MERN stack and the Groq API. Users paste a job description, optionally upload a resume, and get a structured report: match score, likely technical and behavioral questions with the intent behind each, skill gaps highlighted inside the job description, and a five-day plan they can tick off. The AI output is validated against a Zod schema before it's saved, and the app is deployed with the frontend on Vercel proxying to an Express backend on Render.
+I built Interview Lab, an AI-powered interview preparation platform using the MERN stack and the Groq API. Users paste a job description, optionally upload a resume, and get a structured report: match score, likely technical and behavioral questions with the intent behind each, skill gaps highlighted inside the job description, and a five-day plan they can tick off. Free, Pro and Premium plans are sold as monthly Razorpay subscriptions, with signed webhooks keeping each user's plan and allowances in step with their payments. The AI output is validated against a Zod schema before it's saved, and the app is deployed with the frontend on Vercel proxying to an Express backend on Render.
 
 ## What This Project Shows
 
@@ -472,7 +529,8 @@ I built Interview Lab, an AI-powered interview preparation platform using the ME
 - File upload and PDF parsing
 - LLM integration with schema-validated, retried structured output
 - REST API design
-- MongoDB data persistence, including an atomic per-user daily quota
+- Payment integration: Razorpay subscriptions, signature verification, idempotent and order-safe webhooks
+- MongoDB data persistence, including atomic per-user daily and monthly quotas
 - Production hardening: rate limiting, input limits, security headers
 - Automated tests against a real in-memory database, and a CI/CD pipeline that deploys only tested, verified commits
 - Production deployment across Vercel and Render with a same-origin API proxy
