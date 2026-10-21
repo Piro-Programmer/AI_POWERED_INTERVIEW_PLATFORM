@@ -575,23 +575,20 @@ $gutter: clamp(1rem, 4vw, 3rem);
 // Closing band + footer
 // ---------------------------------------------------------------------------
 
-.plans-teaser {
+.plans-home {
   @include wrap;
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 1.5rem 3rem;
-  align-items: end;
   padding-block: clamp(3rem, 8vw, 5rem);
   border-top: 1px solid var(--rule);
 
-  h2 {
+  .section-head h2 {
     margin-top: 0.75rem;
     font-size: clamp(1.8rem, 3.8vw, 2.8rem);
     line-height: 1.05;
   }
 
-  p:not(.eyebrow) {
-    margin-bottom: 0.9rem;
+  &__more,
+  &__fallback {
+    margin-top: 1.75rem;
     color: var(--ink-2);
     font-size: 1.05rem;
   }
@@ -683,8 +680,7 @@ $gutter: clamp(1rem, 4vw, 3rem);
     }
   }
 
-  .candid,
-  .plans-teaser {
+  .candid {
     grid-template-columns: 1fr;
   }
 
