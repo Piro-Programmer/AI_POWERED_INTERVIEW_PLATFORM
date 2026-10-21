@@ -33,8 +33,16 @@ const subscriptionSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    // a downgrade waiting for the end of the current period
+    scheduledPlan: {
+      type: String,
+      enum: ["pro", "premium", null],
+      default: null
+    },
     // time of the newest provider event applied, so older ones are ignored
-    lastEventAt: Date
+    lastEventAt: Date,
+    // last time /billing/me fetched the state from Razorpay itself
+    lastSyncedAt: Date
   },
   { timestamps: true }
 );
