@@ -78,6 +78,14 @@ export const reviewLimiter = limiter({
   message: "You're sending answers too quickly."
 });
 
+/** Checkout and subscription changes per signed-in user (runs after authUser). */
+export const billingLimiter = limiter({
+  windowMs: 15 * MINUTE,
+  limit: 20,
+  keyGenerator: (req) => `billing:${req.user.id}`,
+  message: "Too many billing requests."
+});
+
 /** Plan-progress saves per signed-in user (runs after authUser). */
 export const progressLimiter = limiter({
   windowMs: MINUTE,

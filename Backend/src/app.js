@@ -6,6 +6,7 @@ import interviewRouter from "./routes/interview.routes.js";
 import sharedRouter from "./routes/shared.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import billingRouter from "./routes/billing.routes.js";
+import billingController from "./controllers/billing.controller.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { apiLimiter } from "./middlewares/rateLimit.middleware.js";
@@ -22,6 +23,15 @@ app.use(helmet({
   // allow the optional direct-call setup (VITE_API_URL) to read responses
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
+// Razorpay signs the exact bytes it sends, so this route reads the raw body.
+// Ahead of express.json and the API limiter: Razorpay's retries must never
+// be rate limited away.
+app.post(
+  "/api/billing/webhook",
+  express.raw({ type: "application/json", limit: "1mb" }),
+  billingController.webhookController
+);
+
 app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
 
