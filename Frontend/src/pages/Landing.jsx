@@ -48,6 +48,7 @@ const Landing = () => {
           <a href="#try">Try it</a>
           <a href="#report">What you get</a>
           <a href="#how">How it works</a>
+          <Link to="/pricing">Pricing</Link>
         </nav>
         <div className="topbar__actions">
           {user ? (
@@ -203,6 +204,20 @@ const Landing = () => {
           </div>
         </section>
 
+        <section className="plans-teaser" id="pricing" data-reveal>
+          <div>
+            <p className="eyebrow">§ 04 · Pricing</p>
+            <h2>Free to start. More when you’re interviewing a lot.</h2>
+          </div>
+          <div>
+            <p>
+              Every account gets reports and practice reviews every month at no cost. Pro and Premium raise the
+              limits for weeks when the interviews stack up.
+            </p>
+            <Link className="text-link" to="/pricing">Compare plans →</Link>
+          </div>
+        </section>
+
         <section className="closing">
           <h2 data-reveal>
             Most of your interview is already written down. <em>It’s in the job description.</em>
@@ -215,6 +230,7 @@ const Landing = () => {
         <Wordmark />
         <p>Built with React, Express, MongoDB and Groq.</p>
         <a className="text-link" href={REPO_URL} target="_blank" rel="noreferrer">Source on GitHub</a>
+        <Link className="text-link" to="/pricing">Pricing</Link>
         <Link className="text-link" to="/privacy">Privacy</Link>
       </footer>
     </div>

@@ -21,7 +21,8 @@ const PLANS = {
       report: { daily: envInt("AI_DAILY_LIMIT", 2), monthly: envInt("AI_MONTHLY_LIMIT", 5) },
       review: { daily: envInt("AI_DAILY_REVIEW_LIMIT", 10), monthly: envInt("AI_MONTHLY_REVIEW_LIMIT", 30) }
     }),
-    features: ["5 interview reports a month", "30 AI answer reviews a month", "Share links for your reports"],
+    // beyond the limits, which the catalogue lists from the numbers in force
+    features: ["Share links for your reports"],
     razorpayPlanEnv: null
   },
   pro: {
@@ -34,7 +35,7 @@ const PLANS = {
       report: { daily: 10, monthly: 60 },
       review: { daily: 60, monthly: 400 }
     }),
-    features: ["60 interview reports a month", "400 AI answer reviews a month", "Everything in Free"],
+    features: ["Everything in Free"],
     razorpayPlanEnv: "RAZORPAY_PLAN_PRO"
   },
   premium: {
@@ -47,7 +48,7 @@ const PLANS = {
       report: { daily: 25, monthly: 200 },
       review: { daily: 150, monthly: 1500 }
     }),
-    features: ["200 interview reports a month", "1,500 AI answer reviews a month", "Everything in Pro"],
+    features: ["Everything in Pro"],
     razorpayPlanEnv: "RAZORPAY_PLAN_PREMIUM"
   }
 };
@@ -76,5 +77,21 @@ export const isPurchasable = (id) => {
 export const publicCatalogue = () =>
   PLAN_IDS.map((id) => {
     const { name, priceInPaise, currency, interval, features } = PLANS[id];
-    return { id, name, priceInPaise, currency, interval, features, limits: planLimits(id), purchasable: isPurchasable(id) };
+    const limits = planLimits(id);
+    const count = (n) => n.toLocaleString("en-IN");
+    return {
+      id,
+      name,
+      priceInPaise,
+      currency,
+      interval,
+      // limit lines come from the live numbers, so they never disagree with them
+      features: [
+        `${count(limits.report.monthly)} interview reports a month`,
+        `${count(limits.review.monthly)} AI answer reviews a month`,
+        ...features
+      ],
+      limits,
+      purchasable: isPurchasable(id)
+    };
   });
