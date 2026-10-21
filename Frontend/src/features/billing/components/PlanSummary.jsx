@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { formatDay, percentUsed, statusLine } from "../billing.utils";
+import { formatDay, isSubscriber, percentUsed, statusLine } from "../billing.utils";
 import { getMyBilling } from "../services/billing.api";
 import "../billing.scss";
 
@@ -29,21 +29,25 @@ const Meter = ({ label, counter, resetsLabel }) => (
 /**
  * The user's plan, its status, and how much of this period's (and today's)
  * allowance is used. `compact` hides the daily meters (for the dashboard).
+ * Fetches its own data, unless the page passes `billing` (and then `actions`
+ * replace the default link in the corner).
  */
-const PlanSummary = ({ compact = false }) => {
-  const [billing, setBilling] = useState(null);
+const PlanSummary = ({ compact = false, billing: given, actions }) => {
+  const [fetched, setFetched] = useState(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
+    if (given !== undefined) return undefined;
     let cancelled = false;
     getMyBilling()
-      .then((data) => !cancelled && setBilling(data))
+      .then((data) => !cancelled && setFetched(data))
       .catch(() => !cancelled && setFailed(true));
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [given]);
 
+  const billing = given ?? fetched;
   if (failed) return null; // nice to have; the rest of the page still works
   if (!billing) return <section className="plan-summary plan-summary--loading" aria-busy="true" />;
 
@@ -51,6 +55,14 @@ const PlanSummary = ({ compact = false }) => {
   const status = statusLine(billing);
   const isFree = plan.id === "free";
   const monthEnd = `resets ${formatDay(period.end)}`;
+  const corner = actions ?? (
+    <Link
+      className={`button ${isFree ? "primary-button" : "secondary-button"}`}
+      to={isSubscriber(billing) ? "/billing" : "/pricing"}
+    >
+      {isFree ? "See paid plans" : isSubscriber(billing) ? "Manage billing" : "Compare plans"}
+    </Link>
+  );
 
   return (
     <section className="plan-summary" aria-labelledby="plan-summary-heading">
@@ -62,9 +74,7 @@ const PlanSummary = ({ compact = false }) => {
           </h3>
           {status && <p className="plan-summary__status">{status}</p>}
         </div>
-        <Link className={`button ${isFree ? "primary-button" : "secondary-button"}`} to="/pricing">
-          {isFree ? "See paid plans" : "Compare plans"}
-        </Link>
+        <div className="plan-summary__actions">{corner}</div>
       </header>
 
       <div className="plan-summary__meters">

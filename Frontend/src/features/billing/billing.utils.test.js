@@ -48,6 +48,10 @@ describe("statusLine", () => {
     expect(statusLine(billing())).toMatch(/^Renews on /);
   });
 
+  it("names a scheduled downgrade", () => {
+    expect(statusLine(billing({ plan: { id: "premium" }, scheduledPlan: "pro" }))).toMatch(/^Switches to Pro on /);
+  });
+
   it("explains a pending cancel and a failed renewal", () => {
     expect(statusLine(billing({ status: "cancelled", cancelAtPeriodEnd: true }))).toMatch(/Cancelled\. Your plan stays until/);
     expect(statusLine(billing({ status: "pending" }))).toMatch(/renewal payment failed/);

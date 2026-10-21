@@ -24,6 +24,10 @@ export const router = createBrowserRouter([
     lazy: page(() => import("./features/billing/pages/Pricing"))
   },
   {
+    path: "/billing",
+    lazy: page(() => import("./features/billing/pages/Billing"), { protect: true })
+  },
+  {
     path: "/dashboard",
     lazy: page(() => import("./pages/Home"), { protect: true })
   },

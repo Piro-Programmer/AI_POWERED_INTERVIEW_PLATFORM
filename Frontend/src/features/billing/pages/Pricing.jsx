@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/hooks/useAuth";
 import Wordmark from "../../../components/Wordmark";
 import PlanCards from "../components/PlanCards";
-import { getMyBilling, getPlans } from "../services/billing.api";
+import { billingError, isSubscriber } from "../billing.utils";
+import { useCheckout } from "../useCheckout";
+import { changePlan, getMyBilling, getPlans } from "../services/billing.api";
 import "../../landing/landing.scss";
 import "../billing.scss";
 
@@ -35,9 +37,39 @@ const FAQ = [
 
 const Pricing = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [plans, setPlans] = useState(null);
-  const [currentPlanId, setCurrentPlanId] = useState(null);
+  const [billing, setBilling] = useState(null);
   const [error, setError] = useState("");
+  const [changeError, setChangeError] = useState("");
+  const [changingPlanId, setChangingPlanId] = useState(null);
+  const { checkout, busyPlanId: checkoutPlanId, error: checkoutError } = useCheckout();
+
+  const viewer = { currentPlanId: user ? billing?.plan.id ?? null : null, subscriber: isSubscriber(billing) };
+
+  // Free → paid goes through checkout; paid → paid is a plan change on the
+  // existing subscription (upgrade now, downgrade at renewal).
+  const select = async (plan, action) => {
+    if (!viewer.subscriber) return checkout(plan);
+
+    const question =
+      action === "upgrade"
+        ? `Upgrade to ${plan.name} now? Razorpay charges the difference for the rest of this period.`
+        : `Switch to ${plan.name} when your current period ends?`;
+    if (!window.confirm(question)) return;
+
+    setChangeError("");
+    setChangingPlanId(plan.id);
+    try {
+      await changePlan(plan.id);
+      navigate("/billing", {
+        state: { notice: action === "upgrade" ? `You're on ${plan.name} now.` : `You'll move to ${plan.name} at renewal.` }
+      });
+    } catch (err) {
+      setChangeError(billingError(err, "Couldn't change your plan. Please try again."));
+      setChangingPlanId(null);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -53,7 +85,7 @@ const Pricing = () => {
     if (!user) return undefined;
     let cancelled = false;
     getMyBilling()
-      .then((data) => !cancelled && setCurrentPlanId(data.plan.id))
+      .then((data) => !cancelled && setBilling(data))
       .catch(() => {}); // the cards still work without the "your plan" marker
     return () => {
       cancelled = true;
@@ -104,7 +136,15 @@ const Pricing = () => {
                 Paid plans open soon. Everything on Free works today.
               </p>
             )}
-            <PlanCards plans={plans} currentPlanId={user ? currentPlanId : null} />
+            {(checkoutError || changeError) && (
+              <p className="billing-error" role="alert">{checkoutError || changeError}</p>
+            )}
+            <PlanCards
+              plans={plans}
+              viewer={viewer}
+              onSelect={select}
+              busyPlanId={checkoutPlanId || changingPlanId}
+            />
 
             <section className="compare" id="compare" aria-labelledby="compare-heading">
               <h2 id="compare-heading">Side by side</h2>

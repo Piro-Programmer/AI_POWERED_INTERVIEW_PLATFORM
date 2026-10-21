@@ -338,6 +338,87 @@
   }
 }
 
+.plan-summary__actions {
+  display: flex;
+}
+
+// ---------------------------------------------------------------------------
+// Billing page (/billing)
+
+.billing-ok {
+  margin-top: 2rem;
+  padding: 0.7rem 0.85rem;
+  border-left: 3px solid var(--ok);
+  color: var(--ok);
+  background: rgba(47, 125, 79, 0.08);
+}
+
+.billing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.invoices {
+  margin-top: 3rem;
+
+  h3 {
+    font-size: 1.4rem;
+  }
+
+  &__empty {
+    margin-top: 0.75rem;
+    color: var(--muted);
+  }
+
+  &__id {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  table {
+    width: 100%;
+    min-width: 40rem;
+    border-collapse: collapse;
+    font-size: 0.93rem;
+  }
+
+  th,
+  td {
+    padding: 0.7rem 0.6rem;
+    border-bottom: 1px solid var(--rule);
+    text-align: left;
+  }
+
+  thead th {
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    font-weight: 500;
+    color: var(--muted);
+    border-bottom: 2px solid var(--ink);
+  }
+}
+
+.invoice-status {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--rule-strong);
+
+  &--captured {
+    color: var(--ok);
+    border-color: var(--ok);
+  }
+
+  &--failed {
+    color: var(--pen);
+    border-color: var(--pen);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Upgrade nudge, shown where an allowance ran out
 

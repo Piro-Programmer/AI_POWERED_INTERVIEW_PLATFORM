@@ -4,35 +4,62 @@ import { formatPrice, planAction } from "../billing.utils";
 // The highlighted card: what most people who pay should pick.
 const FEATURED = "pro";
 
-const PlanButton = ({ plan, action }) => {
+const ComingSoon = () => (
+  <button className="button primary-button" disabled title="Payments open soon">
+    Coming soon
+  </button>
+);
+
+/**
+ * The button (or note) at the foot of one card.
+ *   viewer: { currentPlanId, subscriber } — currentPlanId is null when signed out
+ *   onSelect(plan, action): checkout from Free, or a plan change for subscribers
+ */
+const PlanButton = ({ plan, viewer, onSelect, busyPlanId }) => {
+  const action = planAction(plan.id, viewer.currentPlanId);
+  const busy = busyPlanId === plan.id;
+
   if (action === "current") return <span className="plan-card__current">Your plan</span>;
   if (action === "start") return <Link className="button secondary-button" to="/register">Start free</Link>;
-  if (action === "downgrade") return <span className="plan-card__note">Included in your plan</span>;
-  if (!plan.purchasable) {
-    return (
-      <button className="button primary-button" disabled title="Payments open soon">
-        Coming soon
-      </button>
+
+  if (plan.id === "free") {
+    // dropping to Free means cancelling, which lives on the billing page
+    return viewer.subscriber ? (
+      <Link className="button ghost-button" to="/billing">Cancel from Billing</Link>
+    ) : (
+      <span className="plan-card__note">Included in your plan</span>
     );
   }
-  // Signed out: an account first. Checkout itself arrives with the payment step.
-  return action === "choose" ? (
-    <Link className="button primary-button" to="/register">Choose {plan.name}</Link>
-  ) : (
-    <button className="button primary-button" disabled>Upgrade to {plan.name}</button>
+
+  if (!plan.purchasable) return <ComingSoon />;
+  if (action === "choose") return <Link className="button primary-button" to="/register">Choose {plan.name}</Link>;
+  // paid plan below the current one, for someone who isn't paying (an admin)
+  if (action === "downgrade" && !viewer.subscriber) return <span className="plan-card__note">Included in your plan</span>;
+
+  const label =
+    action === "upgrade" ? `Upgrade to ${plan.name}` : `Switch to ${plan.name} at renewal`;
+  return (
+    <button
+      type="button"
+      className={`button ${action === "upgrade" ? "primary-button" : "secondary-button"}`}
+      disabled={Boolean(busyPlanId)}
+      onClick={() => onSelect(plan, action)}
+    >
+      {busy ? (viewer.subscriber ? "Changing plan…" : "Opening checkout…") : label}
+    </button>
   );
 };
 
-/** Free / Pro / Premium side by side. currentPlanId is null when signed out. */
-const PlanCards = ({ plans, currentPlanId = null }) => (
+/** Free / Pro / Premium side by side. */
+const PlanCards = ({ plans, viewer = { currentPlanId: null, subscriber: false }, onSelect, busyPlanId = null }) => (
   <div className="plan-cards">
     {plans.map((plan) => {
-      const action = planAction(plan.id, currentPlanId);
       const featured = plan.id === FEATURED;
+      const current = plan.id === viewer.currentPlanId;
       return (
         <article
           key={plan.id}
-          className={`plan-card ${featured ? "plan-card--featured" : ""} ${action === "current" ? "plan-card--current" : ""}`}
+          className={`plan-card ${featured ? "plan-card--featured" : ""} ${current ? "plan-card--current" : ""}`}
           aria-labelledby={`plan-${plan.id}`}
         >
           {featured && <span className="plan-card__flag">most picked</span>}
@@ -50,7 +77,7 @@ const PlanCards = ({ plans, currentPlanId = null }) => (
             </li>
           </ul>
           <div className="plan-card__action">
-            <PlanButton plan={plan} action={action} />
+            <PlanButton plan={plan} viewer={viewer} onSelect={onSelect} busyPlanId={busyPlanId} />
           </div>
         </article>
       );
