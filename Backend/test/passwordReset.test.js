@@ -8,6 +8,7 @@ vi.mock("../src/services/ai.service.js", () => ({ default: vi.fn(), evaluateAnsw
 process.env.TRUST_PROXY_HOPS = "1";
 const { default: app } = await import("../src/app.js");
 const { default: passwordResetModel } = await import("../src/models/passwordReset.model.js");
+const { resetMailTokenCache } = await import("../src/services/mail.service.js");
 
 const login = (email, password) => request(app).post("/api/auth/login").send({ email, password });
 let testIp = 0;
@@ -15,43 +16,75 @@ const forgot = (email, ip = `10.0.0.${testIp}`) =>
   request(app).post("/api/auth/forgot-password").set("X-Forwarded-For", ip).send({ email });
 const reset = (token, password) => request(app).post("/api/auth/reset-password").send({ token, password });
 
-// Resend's API is replaced by a stub that records each email
+// Google's token and Gmail send endpoints are replaced by a stub that records
+// each email, decoded from the raw MIME message the Gmail API receives
+const TOKEN_URL = "https://oauth2.googleapis.com/token";
+const SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
+const GMAIL_ENV = {
+  GOOGLE_CLIENT_ID: "client-id",
+  GOOGLE_CLIENT_SECRET: "client-secret",
+  GOOGLE_REFRESH_TOKEN: "refresh-token",
+  EMAIL_FROM: "Interview Lab <sender@example.test>"
+};
+
 let sent;
-const resendOk = () => new Response(JSON.stringify({ id: "email_1" }), { status: 200 });
-const lastLink = () => sent.at(-1).body.text.match(/https?:\/\/\S+reset-password\?token=([\w-]+)/)?.[1];
+let tokenCalls;
+const json = (body, status = 200) => new Response(JSON.stringify(body), { status });
+
+/** One sent email: headers and the decoded text/plain part. */
+function decode(raw) {
+  const mime = Buffer.from(raw, "base64url").toString("utf8");
+  const header = (name) => mime.match(new RegExp(`^${name}: (.*)$`, "m"))?.[1];
+  const textPart = mime.split(/--alt_\w+/).find((p) => p.includes("text/plain"));
+  const text = Buffer.from(textPart.split("\r\n\r\n")[1].trim(), "base64").toString("utf8");
+  return { from: header("From"), to: header("To"), subject: header("Subject"), text, mime };
+}
+const lastLink = () => sent.at(-1).text.match(/https?:\/\/\S+reset-password\?token=([\w-]+)/)?.[1];
 
 beforeEach(() => {
   testIp += 1;
   sent = [];
-  process.env.RESEND_API_KEY = "re_test";
-  process.env.EMAIL_FROM = "Interview Lab <no-reply@example.test>";
-  process.env.APP_URL = "https://app.example.test";
+  tokenCalls = [];
+  resetMailTokenCache();
+  Object.assign(process.env, GMAIL_ENV, { APP_URL: "https://app.example.test" });
   vi.stubGlobal("fetch", vi.fn(async (url, init) => {
-    sent.push({ url, headers: init.headers, body: JSON.parse(init.body) });
-    return resendOk();
+    if (url === TOKEN_URL) {
+      tokenCalls.push(Object.fromEntries(new URLSearchParams(init.body)));
+      return json({ access_token: "access-1", expires_in: 3600 });
+    }
+    if (url === SEND_URL) {
+      sent.push({ authorization: init.headers.Authorization, ...decode(JSON.parse(init.body).raw) });
+      return json({ id: "msg_1" });
+    }
+    throw new Error(`unexpected fetch ${url}`);
   }));
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  delete process.env.RESEND_API_KEY;
-  delete process.env.EMAIL_FROM;
-  delete process.env.APP_URL;
+  for (const name of [...Object.keys(GMAIL_ENV), "APP_URL"]) delete process.env[name];
 });
 
 describe("forgot password", () => {
-  it("emails a one-time link through Resend, storing only a hash of the token", async () => {
+  it("emails a one-time link through the Gmail API, storing only a hash of the token", async () => {
     const user = await createUser({ username: "ana", email: "ana@example.test" });
 
     const res = await forgot("ana@example.test");
     expect(res.status).toBe(200);
     expect(res.body.message).toMatch(/If an account exists/);
 
+    expect(tokenCalls).toEqual([
+      { client_id: "client-id", client_secret: "client-secret", refresh_token: "refresh-token", grant_type: "refresh_token" }
+    ]);
     expect(sent).toHaveLength(1);
-    expect(sent[0].url).toBe("https://api.resend.com/emails");
-    expect(sent[0].headers.Authorization).toBe("Bearer re_test");
-    expect(sent[0].body).toMatchObject({ to: ["ana@example.test"], from: "Interview Lab <no-reply@example.test>" });
-    expect(sent[0].body.text).toContain("https://app.example.test/reset-password?token=");
+    expect(sent[0]).toMatchObject({
+      authorization: "Bearer access-1",
+      from: "Interview Lab <sender@example.test>",
+      to: "ana@example.test",
+      subject: "Reset your Interview Lab password"
+    });
+    expect(sent[0].mime).toContain("text/html");
+    expect(sent[0].text).toContain("https://app.example.test/reset-password?token=");
 
     const token = lastLink();
     const stored = await passwordResetModel.findOne({ user: user._id }).lean();
@@ -77,8 +110,24 @@ describe("forgot password", () => {
     expect(res.body.message).toMatch(/If an account exists/);
   });
 
+  it("reuses the access token for the next email", async () => {
+    await createUser({ email: "twice@example.test" });
+    await forgot("twice@example.test");
+    await forgot("twice@example.test");
+    expect(sent).toHaveLength(2);
+    expect(tokenCalls).toHaveLength(1);
+  });
+
+  it("still answers the same when Google refuses the refresh token", async () => {
+    await createUser({ email: "revoked@example.test" });
+    vi.stubGlobal("fetch", vi.fn(async () => json({ error: "invalid_grant" }, 400)));
+    const res = await forgot("revoked@example.test");
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/If an account exists/);
+  });
+
   it("says so when email isn't set up", async () => {
-    delete process.env.RESEND_API_KEY;
+    delete process.env.GOOGLE_REFRESH_TOKEN;
     const res = await forgot("anyone@example.test");
     expect(res.status).toBe(503);
     expect(res.body.code).toBe("EMAIL_DISABLED");

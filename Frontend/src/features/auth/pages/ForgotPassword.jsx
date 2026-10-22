@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import AuthShell from "../components/AuthShell";
 import { forgotPassword } from "../services/auth.api";
 
 const ForgotPassword = () => {
-  const [email, setEmail] = useState("");
+  // "Set a password" on the Account page passes the account's email along
+  const { state } = useLocation();
+  const [email, setEmail] = useState(typeof state?.email === "string" ? state.email : "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState("");

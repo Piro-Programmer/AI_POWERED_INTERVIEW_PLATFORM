@@ -13,9 +13,20 @@ const userSchema = new mongoose.Schema({
     required: true,
   },
 
+  // bcrypt hash. Accounts made with Google have none until the user sets one
+  // through "Forgot password?"
   password: {
     type: String,
-    required: true,
+    required: function () {
+      return !this.googleId;
+    },
+  },
+
+  // Google's stable account id ("sub"), set on the first Google sign-in
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true,
   },
 
   // Sessions (JWTs) issued before this moment are no longer accepted

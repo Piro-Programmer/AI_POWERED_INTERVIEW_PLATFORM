@@ -28,6 +28,20 @@ authRouter.post("/register", registerLimiter, authController.registerUserControl
 authRouter.post("/login", loginIpLimiter, loginAccountLimiter, authController.loginUserController);
 
 /**
+ * @route GET /api/auth/providers
+ * @description which sign-in providers are on: { google: clientId | null }
+ * @access Public
+ */
+authRouter.get("/providers", authController.providersController);
+
+/**
+ * @route POST /api/auth/google
+ * @description sign in or sign up with a Google ID token ({ credential }); links an existing account with the same verified email
+ * @access Public (rate limited per IP)
+ */
+authRouter.post("/google", loginIpLimiter, authController.googleSignInController);
+
+/**
  * @route GET /api/auth/logout
  * @description clear token from user cookie and add the token in blacklist
  * @access Public

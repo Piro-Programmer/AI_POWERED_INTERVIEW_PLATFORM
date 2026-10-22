@@ -64,9 +64,24 @@ export async function changePassword({ currentPassword, newPassword }) {
   return response.data;
 }
 
-/** Delete the account and all its data. */
-export async function deleteAccount(password) {
-  const response = await api.delete("/api/auth/account", { data: { password } });
+/**
+ * Delete the account and all its data. Confirmed with { password }, or with
+ * { email } for a Google account that has no password.
+ */
+export async function deleteAccount(confirmation) {
+  const response = await api.delete("/api/auth/account", { data: confirmation });
+  return response.data;
+}
+
+/** Which sign-in providers are on. Resolves to { google: clientId | null }. */
+export async function getProviders() {
+  const response = await api.get("/api/auth/providers");
+  return response.data;
+}
+
+/** Sign in (or sign up) with the ID token from Google's button. Resolves to { user }. */
+export async function googleSignIn(credential) {
+  const response = await api.post("/api/auth/google", { credential });
   return response.data;
 }
 

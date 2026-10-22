@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import "../auth.form.scss";
 import { useAuth } from "../hooks/useAuth";
 import Wordmark from "../../../components/Wordmark";
+import GoogleButton from "../components/GoogleButton";
 
 const Login = () => {
   const { loading, handleLogin } = useAuth();
@@ -47,6 +48,8 @@ const Login = () => {
       <section className="auth-card">
         <h2>Sign in</h2>
         <p className="auth-card__sub">Your reports and prep plans are saved to your account.</p>
+
+        <GoogleButton text="continue_with" />
 
         <form onSubmit={handleSubmit}>
           <div className="input-group">

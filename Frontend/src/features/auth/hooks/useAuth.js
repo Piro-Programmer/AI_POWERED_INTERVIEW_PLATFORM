@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import { AuthContext } from "../auth.context";
-import {login, register, logout} from "../services/auth.api"
+import {login, register, logout, googleSignIn} from "../services/auth.api"
 
 
 export const useAuth = () =>{
@@ -55,6 +55,21 @@ export const useAuth = () =>{
     }
   }
 
+  // The page stays on screen while this runs (no global loading state), so
+  // Google's button isn't torn down mid-sign-in.
+  const handleGoogle = async (credential) => {
+    try {
+      const data = await googleSignIn(credential)
+      if (data && data.user) {
+        setUser(data.user)
+        return { ok: true }
+      }
+      return { ok: false, message: "Google sign-in failed. Please try again." }
+    } catch (err) {
+      return { ok: false, message: errorMessage(err, "Couldn't reach the server. Please try again.") }
+    }
+  }
+
   const handleLogout = async ()=>{
     setLoading(true)
     try{
@@ -73,5 +88,5 @@ export const useAuth = () =>{
     }
   }
 
-  return {user, loading, handleRegister, handleLogin,handleLogout }
+  return {user, loading, handleRegister, handleLogin, handleGoogle, handleLogout }
 }
