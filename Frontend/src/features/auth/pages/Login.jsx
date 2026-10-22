@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import "../auth.form.scss";
 import { useAuth } from "../hooks/useAuth";
 import Wordmark from "../../../components/Wordmark";
+import GoogleButton from "../components/GoogleButton";
 
 const Login = () => {
   const { loading, handleLogin } = useAuth();
@@ -48,6 +49,8 @@ const Login = () => {
         <h2>Sign in</h2>
         <p className="auth-card__sub">Your reports and prep plans are saved to your account.</p>
 
+        <GoogleButton text="continue_with" />
+
         <form onSubmit={handleSubmit}>
           <div className="input-group">
             <label htmlFor="email">Email</label>
@@ -63,7 +66,10 @@ const Login = () => {
             />
           </div>
           <div className="input-group">
-            <label htmlFor="password">Password</label>
+            <div className="input-group__label-row">
+              <label htmlFor="password">Password</label>
+              <Link className="text-link input-group__aside" to="/forgot-password">Forgot password?</Link>
+            </div>
             <input
               value={password}
               onChange={(e) => setPassword(e.target.value)}

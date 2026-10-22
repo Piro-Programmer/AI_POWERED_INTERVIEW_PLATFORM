@@ -1,7 +1,15 @@
 import { Router } from "express";
 import authController from "../controllers/auth.controllers.js";
 import authMiddleware from "../middlewares/auth.middleware.js";
-import { loginAccountLimiter, loginIpLimiter, passwordCheckLimiter, registerLimiter } from "../middlewares/rateLimit.middleware.js";
+import {
+  forgotEmailLimiter,
+  forgotIpLimiter,
+  loginAccountLimiter,
+  loginIpLimiter,
+  passwordCheckLimiter,
+  registerLimiter,
+  resetLimiter
+} from "../middlewares/rateLimit.middleware.js";
 
 const authRouter = Router();
 
@@ -18,6 +26,20 @@ authRouter.post("/register", registerLimiter, authController.registerUserControl
  * @access Public (failed attempts rate limited per IP and per account)
  */
 authRouter.post("/login", loginIpLimiter, loginAccountLimiter, authController.loginUserController);
+
+/**
+ * @route GET /api/auth/providers
+ * @description which sign-in providers are on: { google: clientId | null }
+ * @access Public
+ */
+authRouter.get("/providers", authController.providersController);
+
+/**
+ * @route POST /api/auth/google
+ * @description sign in or sign up with a Google ID token ({ credential }); links an existing account with the same verified email
+ * @access Public (rate limited per IP)
+ */
+authRouter.post("/google", loginIpLimiter, authController.googleSignInController);
 
 /**
  * @route GET /api/auth/logout
@@ -46,5 +68,19 @@ authRouter.patch("/password", authMiddleware.authUser, passwordCheckLimiter, aut
  * @access private (wrong passwords rate limited per user)
  */
 authRouter.delete("/account", authMiddleware.authUser, passwordCheckLimiter, authController.deleteAccountController);
+
+/**
+ * @route POST /api/auth/forgot-password
+ * @description email a one-time reset link ({ email }); same answer whether or not the account exists
+ * @access Public (rate limited per network and per email)
+ */
+authRouter.post("/forgot-password", forgotIpLimiter, forgotEmailLimiter, authController.forgotPasswordController);
+
+/**
+ * @route POST /api/auth/reset-password
+ * @description set a new password with the emailed token ({ token, password }); signs out every session
+ * @access Public (rate limited per network)
+ */
+authRouter.post("/reset-password", resetLimiter, authController.resetPasswordController);
 
 export default authRouter;

@@ -1,4 +1,5 @@
 import { useContext, useState } from "react";
+import { Link } from "react-router-dom";
 import AppSidebar from "../../../components/AppSidebar";
 import PlanSummary from "../../billing/components/PlanSummary";
 import { AuthContext } from "../auth.context";
@@ -91,7 +92,22 @@ const ChangePassword = () => {
   );
 };
 
-const DeleteAccount = () => {
+// A Google account without a password sets one through the reset email,
+// which also proves it still owns the address.
+const SetPassword = ({ email }) => (
+  <section className="account__section" aria-labelledby="password-heading">
+    <h3 id="password-heading">Password</h3>
+    <p>
+      You sign in with Google, so there's no password on this account. To also sign in with {email} and a
+      password, set one from a reset email.
+    </p>
+    <Link className="button secondary-button" to="/forgot-password" state={{ email }}>
+      Set a password
+    </Link>
+  </section>
+);
+
+const DeleteAccount = ({ hasPassword, email }) => {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -103,7 +119,7 @@ const DeleteAccount = () => {
     setBusy(true);
     setError("");
     try {
-      await deleteAccount(password);
+      await deleteAccount(hasPassword ? { password } : { email: password });
       // A full page load: nothing from the deleted account stays in memory,
       // and the sign-in guard can't race the navigation to /login.
       window.location.replace("/");
@@ -119,11 +135,11 @@ const DeleteAccount = () => {
       <p>Removes your account, all your reports, practice answers and usage history for good.</p>
       <form onSubmit={submit}>
         <div className="input-group">
-          <label htmlFor="delete-password">Password</label>
+          <label htmlFor="delete-password">{hasPassword ? "Password" : `Type your email (${email}) to confirm`}</label>
           <input
             id="delete-password"
-            type="password"
-            autoComplete="current-password"
+            type={hasPassword ? "password" : "email"}
+            autoComplete={hasPassword ? "current-password" : "off"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -142,6 +158,8 @@ const DeleteAccount = () => {
 
 const Account = () => {
   const { user } = useContext(AuthContext);
+  // older sessions don't report it; every account had a password before Google sign-in
+  const hasPassword = user?.hasPassword !== false;
 
   return (
     <main className="workspace-page">
@@ -157,8 +175,8 @@ const Account = () => {
         <PlanSummary />
 
         <div className="account">
-          <ChangePassword />
-          <DeleteAccount />
+          {hasPassword ? <ChangePassword /> : <SetPassword email={user?.email} />}
+          <DeleteAccount hasPassword={hasPassword} email={user?.email} />
         </div>
       </section>
     </main>

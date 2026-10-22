@@ -27,7 +27,8 @@ const Privacy = () => (
           <dt>Your account</dt>
           <dd>
             Username, email address, and your password as a one-way hash (bcrypt). Nobody, including us, can read
-            your password.
+            your password. If you sign in with Google, we also store your Google account’s ID (no password, and
+            nothing else from your Google account).
           </dd>
           <dt>Your reports</dt>
           <dd>
@@ -70,6 +71,14 @@ const Privacy = () => (
           </li>
           <li><strong>Hosting:</strong> Vercel serves the website, Render runs the server, and a hosted MongoDB database stores the data above.</li>
           <li><strong>Google Fonts</strong> delivers the typefaces, so your browser contacts Google when the page loads.</li>
+          <li>
+            <strong>Sign in with Google</strong>, if you use it: Google confirms who you are and shares your name,
+            email address and Google account ID with us. Google’s button is loaded only on the sign-in pages.
+          </li>
+          <li>
+            <strong>Gmail</strong> sends the password-reset email, if you ask for one. It receives your email address
+            and the message. Reset links work once and expire after 30 minutes.
+          </li>
         </ul>
       </section>
 

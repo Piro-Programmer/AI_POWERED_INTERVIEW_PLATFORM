@@ -72,6 +72,8 @@ Every response is validated against a strict schema before it reaches the user, 
 
 **Platform**
 - Registration, login, logout and protected routes
+- **Continue with Google** (Google Identity Services): one tap to sign up or sign in; an existing account with the same verified email is linked, not duplicated
+- **Forgot password?**: a one-time reset link by email (sent from Gmail through the Gmail API), valid for 30 minutes; only a hash of the token is stored
 - JWT authentication in an HTTP-only cookie
 - Optional PDF resume upload with text extraction
 - AI report generation with Groq (Gemini supported as a fallback)
@@ -323,6 +325,8 @@ push to main ─► detect changes ─► tests (as above) ─► deploy backend
 
 **Backend** (Vitest + Supertest + an in-memory MongoDB via `mongodb-memory-server`). The AI is mocked, so tests never call Groq:
 
+- Google sign-in (token check mocked): new account, linking by verified email, forged or unverified tokens rejected, password-less accounts
+- password reset: hash-only tokens, no account enumeration, one-time links, expiry, rate limits, Gmail API request
 - auth: register/login validation, NoSQL-injection inputs rejected, per-account lockout after 10 failed sign-ins, logout blacklisting
 - reports: generation, input caps, PDF type/size, summaries without resume text, one generation at a time, **another user's report is always a 404**
 - quota: **20 parallel reservations against real MongoDB never exceed a limit of 10**, refunds, separate report/review allowances, burst limit
@@ -430,6 +434,19 @@ Deploy hooks are secret URLs: anyone holding one can trigger a deploy, so keep t
 
 Test with UPI `success@razorpay`. Subscriptions need a payment method that allows recurring payments, so ordinary test cards are declined. To go live, activate the account, then repeat steps 1–4 in **Live Mode** (keys, plans and webhooks don't carry over) and replace the five values on Render.
 
+### Google sign-in and password-reset email
+
+Both are optional and need no custom domain. One Google Cloud project serves both:
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), create a project and configure the **OAuth consent screen** (External). Add the scope `gmail.send` and set the publishing status to **In production**: in Testing, refresh tokens expire after 7 days.
+2. Under **Credentials**, create an **OAuth client ID** of type *Web application*:
+   - Authorized JavaScript origins: `https://<your-app>.vercel.app` and `http://localhost:5173`
+   - Authorized redirect URI: `http://localhost:5555/oauth2callback`
+3. Enable the **Gmail API**. Put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `Backend/.env`, run `node scripts/getGmailRefreshToken.js` and sign in with the Gmail account that should send the emails. It prints `GOOGLE_REFRESH_TOKEN`.
+4. On Render, add `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `EMAIL_FROM` (`Interview Lab <you@gmail.com>`) and `APP_URL` (the Vercel URL), then redeploy.
+
+`GOOGLE_CLIENT_ID` alone turns on the Google button; the reset email needs all four. Emails go over HTTPS because Render's free plan blocks SMTP. A personal Gmail account can send about 500 emails a day.
+
 ### Calling the backend directly instead (optional)
 
 If you'd rather not proxy through Vercel, set `VITE_API_URL=https://<your-service>.onrender.com` on Vercel, and on Render set `CLIENT_URL=https://<your-app>.vercel.app` and `COOKIE_SAMESITE=none`. Some browsers block cross-site cookies, which is why the proxy setup is recommended.
@@ -453,10 +470,14 @@ If you'd rather not proxy through Vercel, set `VITE_API_URL=https://<your-servic
 ```text
 POST /api/auth/register
 POST /api/auth/login
+GET  /api/auth/providers   # { google: clientId | null }: whether Continue with Google is on
+POST /api/auth/google      # { credential } from Google's button; signs in or signs up
 GET  /api/auth/logout
 GET  /api/auth/get-me
 PATCH  /api/auth/password   # { currentPassword, newPassword }; signs out other sessions
-DELETE /api/auth/account    # { password }; deletes the account and all its data
+DELETE /api/auth/account    # { password } (or { email } for a Google account without one); deletes the account and all its data
+POST   /api/auth/forgot-password  # { email }; emails a one-time reset link (same answer whether or not the account exists)
+POST   /api/auth/reset-password   # { token, password }; sets the new password and signs out every session
 ```
 
 ### Interview Reports

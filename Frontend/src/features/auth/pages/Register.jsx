@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import "../auth.form.scss";
 import Wordmark from "../../../components/Wordmark";
+import GoogleButton from "../components/GoogleButton";
 import { PASSWORD_HINT, passwordProblem } from "../password";
 
 const Register = () => {
@@ -54,6 +55,8 @@ const Register = () => {
       <section className="auth-card">
         <h2>Create an account</h2>
         <p className="auth-card__sub">So your reports are still here next week.</p>
+
+        <GoogleButton text="signup_with" />
 
         <form onSubmit={handleSubmit}>
           <div className="input-group">

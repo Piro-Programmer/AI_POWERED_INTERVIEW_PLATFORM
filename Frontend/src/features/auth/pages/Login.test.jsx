@@ -9,7 +9,9 @@ vi.mock("../services/auth.api", () => ({
   login: vi.fn(),
   register: vi.fn(),
   logout: vi.fn(),
-  getMe: vi.fn()
+  getMe: vi.fn(),
+  getProviders: vi.fn(async () => ({ google: null })), // Google sign-in off: email form only
+  googleSignIn: vi.fn()
 }));
 
 const fillAndSubmit = async (email, password) => {
