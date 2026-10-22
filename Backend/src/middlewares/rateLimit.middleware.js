@@ -55,6 +55,28 @@ export const passwordCheckLimiter = limiter({
   message: "Too many wrong password attempts."
 });
 
+/** Reset-link requests per IP address. */
+export const forgotIpLimiter = limiter({
+  windowMs: 60 * MINUTE,
+  limit: 10,
+  message: "Too many reset requests from your network."
+});
+
+/** Reset-link requests per email address, so nobody can flood one inbox. */
+export const forgotEmailLimiter = limiter({
+  windowMs: 60 * MINUTE,
+  limit: 3,
+  keyGenerator: (req) => `forgot:${String(req.body?.email ?? "").trim().toLowerCase()}`,
+  message: "Too many reset requests for this email."
+});
+
+/** Attempts to use a reset link, per IP address (guessing a token is hopeless anyway). */
+export const resetLimiter = limiter({
+  windowMs: 15 * MINUTE,
+  limit: 20,
+  message: "Too many attempts."
+});
+
 /** New accounts per IP address. */
 export const registerLimiter = limiter({
   windowMs: 60 * MINUTE,

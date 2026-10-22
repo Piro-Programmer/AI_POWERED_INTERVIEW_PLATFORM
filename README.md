@@ -457,6 +457,8 @@ GET  /api/auth/logout
 GET  /api/auth/get-me
 PATCH  /api/auth/password   # { currentPassword, newPassword }; signs out other sessions
 DELETE /api/auth/account    # { password }; deletes the account and all its data
+POST   /api/auth/forgot-password  # { email }; emails a one-time reset link (same answer whether or not the account exists)
+POST   /api/auth/reset-password   # { token, password }; sets the new password and signs out every session
 ```
 
 ### Interview Reports
