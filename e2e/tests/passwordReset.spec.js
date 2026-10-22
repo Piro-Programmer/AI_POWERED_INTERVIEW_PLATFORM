@@ -18,6 +18,8 @@ test("forgot password: email link, set a new password, sign in with it", async (
   await page.getByRole("button", { name: "Sign out" }).click();
 
   await page.getByRole("link", { name: "Forgot password?" }).click();
+  // the page loads lazily: until it's on screen, "Email" is still the sign-in form's field
+  await expect(page.getByRole("heading", { name: "Reset your password" })).toBeVisible();
   await page.getByLabel("Email").fill(user.email);
   await page.getByRole("button", { name: "Send reset link" }).click();
   await expect(page.getByRole("status")).toContainText("If an account exists for that email");
@@ -42,6 +44,7 @@ test("forgot password: email link, set a new password, sign in with it", async (
   await expect(page.getByRole("alert")).toContainText("invalid or has expired");
 
   await page.goto("/login");
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   await page.getByLabel("Email").fill(user.email);
   await page.getByLabel("Password").fill("reset-pass-77");
   await page.getByRole("button", { name: "Sign in" }).click();
